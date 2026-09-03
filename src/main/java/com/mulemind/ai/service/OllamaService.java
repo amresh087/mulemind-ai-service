@@ -2,7 +2,6 @@ package com.mulemind.ai.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -10,14 +9,12 @@ import org.springframework.web.client.RestTemplate;
 
 import com.mulemind.ai.dto.EmbeddingRequest;
 import com.mulemind.ai.dto.EmbeddingResponse;
+import com.mulemind.ai.dto.ProjectScanResultEvent;
+import com.mulemind.ai.utilty.DocumentationType;
 import com.mulemind.ai.utilty.PromptHelper;
 
 import io.qdrant.client.QdrantClient;
-import io.qdrant.client.WithPayloadSelectorFactory;
-import io.qdrant.client.grpc.Points.ScoredPoint;
-import io.qdrant.client.grpc.Points.SearchPoints;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
 
 @Service
 public class OllamaService {
@@ -43,119 +40,39 @@ public class OllamaService {
         this.qdrantClient = qdrantClient;
     }
 
-    /**
-     * Processes the given command based on the specified session mode. Depending on the session mode, it generates a prompt, calls the Ollama API, and processes the response to return a structured JSON string.
-     * @param command
-     * @param sessionMode
-     * @return
-     * @throws RuntimeException
-     */
-    public String processUnified(String command, String sessionMode) throws RuntimeException {
-    String prompt;
-    String resultJsonString = null;
-    ObjectMapper mapper = new ObjectMapper();
+   
 
-    if ("CONFIRM_PACKAGING".equalsIgnoreCase(sessionMode)) {
-      
-              prompt = PromptHelper.getConfirmationPrompt(command);
-              String llmJsonString = executeOllamaCall(prompt);
+    public String generateApplicationDocumentation(ProjectScanResultEvent scanEvent,DocumentationType docType) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String metadataJson = mapper.writeValueAsString(scanEvent);
+            String prompt = null;
 
-              ObjectNode llmRootNode = (ObjectNode) mapper.readTree(llmJsonString);
-              Boolean llmIsLooose = llmRootNode.get("isLoose").asBoolean();
-              String searchContext = llmIsLooose ? "loose" : "packet";
-              // Call our updated type-safe helper
-              String matchedIsLooseStr = searchTopProductField(searchContext, "productType");
-              // Write it back to the JSON node cleanly as an actual Boolean primitive
-              if ("loose".equals(matchedIsLooseStr)) {
-                    llmRootNode.put("isLoose", true);
-              } else if ("packet".equals(matchedIsLooseStr)) {
-                    llmRootNode.put("isLoose", false);
-              }
-              resultJsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(llmRootNode);
+            if (docType == DocumentationType.TECHNICAL_DOC) {
+                prompt = PromptHelper.getTechnicalDocPrompt(metadataJson);
+            } else if (docType == DocumentationType.FLOW_DOC) {
+                prompt = PromptHelper.getFlowDocPrompt(metadataJson);
+            } else if (docType == DocumentationType.SEQUENCE_DOC) {
+                prompt = PromptHelper.getSequenceDocPrompt(metadataJson);
+            }else if (docType == DocumentationType.FUNCTIONAL_DOC) {
+                prompt = PromptHelper.getFunctionalDocPrompt(metadataJson);
+            }
 
-    } else if ("BRAND_SELECTION".equalsIgnoreCase(sessionMode)) {
-       
-              prompt = PromptHelper.getBrandSelectionPrompt(command);
-              String llmJsonString = executeOllamaCall(prompt);
-              ObjectNode llmRootNode = (ObjectNode) mapper.readTree(llmJsonString);
-              String llmBrand = llmRootNode.get("brand").asString();
-              // Fetch the nearest brand match from Qdrant
-              String matchedBrand = searchTopProductField(llmBrand, "brandName");
-              llmRootNode.put("brand", matchedBrand);
-              resultJsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(llmRootNode);
-
-      } else if("TAKE_PAYMENT".equalsIgnoreCase(sessionMode)) {
-
-              prompt = PromptHelper.getPaymentIntentPrompt(command);
-              resultJsonString = executeOllamaCall(prompt);
-
-      }else if("WAITING_FOR_MOBILE_CONSENT".equalsIgnoreCase(sessionMode) 
-        || "WAITING_FOR_WALLET_CONSENT".equalsIgnoreCase(sessionMode)
-        || "WAITING_FOR_PAY_CONFIRM".equalsIgnoreCase(sessionMode) 
-        || "CONFIRM_WITHOUTMOBILE".equalsIgnoreCase(sessionMode)
-      ) {
-
-              prompt = PromptHelper.getConsentPrompt(command);
-              resultJsonString = executeOllamaCall(prompt);
-
-      }else {
-
-              prompt = PromptHelper.getProductPrompt(command);
-              // llm response
-              String llmJsonString = executeOllamaCall(prompt);
-              ObjectNode llmRootNode = (ObjectNode) mapper.readTree(llmJsonString);
-              String llmIntent = llmRootNode.get("intent").asString();
-              if ("ADD_ITEM".equalsIgnoreCase(llmIntent)) {
-                    String llMProductName = llmRootNode.get("productName").asString();
-                    // Fetch the nearest product name match from Qdrant
-                    String matchedProductName = searchTopProductField(llMProductName, "name");
-                    llmRootNode.put("productName", matchedProductName);
-                    resultJsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(llmRootNode);
-
-              } else {
-                    // Fallback if intent is not ADD_ITEM but you still need to return the raw
-                    // response
-                    resultJsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(llmRootNode);
-              }
-    }
-
-    return resultJsonString;
-}
-
-/**
- * Helper method to handle common embedding generation and Qdrant vector searching.
- */
-private String searchTopProductField(String textToEmbed, String payloadKey) {
-    EmbeddingResponse embedding = createEmbedding(
-        EmbeddingRequest.builder().prompt(textToEmbed).build()
-    );
-
-    List<Float> queryVector = embedding.getEmbedding().stream()
-        .map(Double::floatValue)
-        .toList();
-
-    SearchPoints searchRequest = SearchPoints.newBuilder()
-        .setCollectionName("products")
-        .addAllVector(queryVector)
-        .setLimit(1)
-        .setWithPayload(WithPayloadSelectorFactory.enable(true))
-        .build();
-
-    try {
-        List<ScoredPoint> qdrantResults = qdrantClient.searchAsync(searchRequest).get();
-        
-        if (qdrantResults != null && !qdrantResults.isEmpty()) {
-            ScoredPoint point = qdrantResults.get(0);
-            System.out.println("Vector Match Score: " + point.getScore());
-            return point.getPayload().get(payloadKey).getStringValue();
-        } else {
-            throw new RuntimeException("No vector search results found for: " + textToEmbed);
+            System.out.println("=============== Generated Prompt for Ollama: " + prompt);
+            
+            if (prompt == null) {
+                throw new IllegalArgumentException("Unsupported documentation type: " + docType);
+            }
+            
+            String result= executeOllamaCall(prompt);
+            System.out.println("=============== Generated Documentation from Ollama: " + result);
+            return result;
+        } catch (Exception exception) {
+            throw new RuntimeException("Failed to generate application documentation", exception);
         }
-    } catch (InterruptedException | ExecutionException e) {
-        Thread.currentThread().interrupt(); // Restore interrupted status if InterruptedException
-        throw new RuntimeException("Failed to execute Qdrant vector search", e);
     }
-}
+
+
 
 
 /**

@@ -1,820 +1,1018 @@
 package com.mulemind.ai.utilty;
 
+
 public class PromptHelper {
 
-   /**
-     * Generates a prompt for the standard intent parsing pipeline.
-     * 
-     * @param command The user's input command.
-     * @return The generated prompt.
-     */
-public static String getProductPrompt(String command) {
-    return """
-        You are a grocery billing assistant.
+    
 
-        Return ONLY a valid JSON object.
-
-        STRICT JSON RULES:
-        - Output must be valid JSON.
-        - Do not return markdown.
-        - Do not return code fences.
-        - Do not return explanations.
-        - Do not return any text before or after the JSON.
-        - Every property name MUST be enclosed in double quotes.
-        - Every string value MUST be enclosed in double quotes.
-        - Never generate invalid JSON such as:
-          "unit:"kg"
-          "productName:"Aata"
-        - Always generate:
-          "unit":"kg"
-          "productName":"Aata"
-        - Use the exact field names shown below.
-        - Do not add extra fields.
-
-        Allowed intents:
-        ADD_ITEM
-        REMOVE_ITEM
-        UNKNOWN
-
-        Rules:
-        - Understand English, Hindi, and Hinglish.
-        - Extract intent, productName, qty, and unit.
-        - Preserve product name exactly as spoken.
-        - If quantity is missing, use 1.
-        - If unit is missing, use "".
-
-        Intent Detection:
-        - add, insert, include, जोड़ो, डालो -> ADD_ITEM
-        - remove, delete, cancel, हटाओ, निकालो -> REMOVE_ITEM
-        - If a product is mentioned without an action, assume ADD_ITEM.
-
-        Quantity Conversion:
-        - आधा, half -> 0.5
-        - डेढ़ -> 1.5
-        - सवा -> 1.25
-        - पौना -> 0.75
-        - ढाई -> 2.5
-
-        Unit Conversion:
-        - kilo, kilogram, kilos, kg, किलो, किलोग्राम, केजी -> kg
-        - gram, grams, g, ग्राम -> g
-        - litre, liter, litres, l, लीटर -> l
-        - millilitre, milliliter, ml, मिलीलीटर -> ml
-        - packet, packets, पैकेट -> packet
-        - piece, pieces, पीस -> piece
-
-        REQUIRED OUTPUT FORMAT:
-
-        {
-          "intent":"ADD_ITEM",
-          "productSku":"",
-          "productName":"Aata",
-          "qty":1,
-          "unit":"kg"
-        }
-
-        VALID EXAMPLES:
-
-        Input: 5 किलो आटा
-
-        Output:
-        {
-          "intent":"ADD_ITEM",
-          "productSku":"",
-          "productName":"आटा",
-          "qty":5,
-          "unit":"kg"
-        }
-
-        Input: आधा किलो आटा
-
-        Output:
-        {
-          "intent":"ADD_ITEM",
-          "productSku":"",
-          "productName":"आटा",
-          "qty":0.5,
-          "unit":"kg"
-        }
-
-        Input: मैगी हटाओ
-
-        Output:
-        {
-          "intent":"REMOVE_ITEM",
-          "productSku":"",
-          "productName":"मैगी",
-          "qty":1,
-          "unit":""
-        }
-
-        Input: xyz abc
-
-        Output:
-        {
-          "intent":"UNKNOWN",
-          "productSku":"",
-          "productName":"",
-          "qty":0,
-          "unit":""
-        }
-
-        User Input:
-        %s
-        """.formatted(command);
-}
-
-   /* 
-    public static String getProductPrompt(String command) {
-        return """
-                You are a grocery billing assistant.
-
-                Return ONLY valid JSON.
-
-                Do not explain.
-                Do not use markdown.
-                Do not use code fences.
-
-                Allowed intents:
-                ADD_ITEM
-                REMOVE_ITEM
-                UNKNOWN
-
-                Schema:
-                {
-                  "intent":"",
-                  "productSku":"",
-                  "productName":"",
-                  "qty":0,
-                  "unit":""
-                }
-
-                Examples:
-
-                Input:
-                Add 5 kg Aata
-                Output:
-                {
-                  "intent":"ADD_ITEM",
-                  "productName":"Aata",
-                  "qty":5,
-                  "unit":"kg"
-                }
-
-                Input:
-                Add 2 packets Maggi
-                Output:
-                {
-                  "intent":"ADD_ITEM",
-                  "productName":"Maggi",
-                  "qty":2,
-                  "unit":"packet"
-                }
-
-
-                Input:
-                Add 1 packets Masala Munch
-                Output:
-                {
-                  "intent":"ADD_ITEM",
-                  "productName":"Masala Munch",
-                  "qty":1,
-                  "unit":"packet"
-                }
-
-
-                Input:
-                Add 1 litre mustard oil
-                Output:
-                {
-                  "intent":"ADD_ITEM",
-                  "productName":"Mustard Oil",
-                  "qty":1,
-                  "unit":"l"
-                }
-
-
-                Input:
-                Search mustard oil
-                Output:
-                {
-                  "intent":"SEARCH_PRODUCT",
-                  "productName":"Mustard Oil",
-                  "qty":0,
-                  "unit":""
-                }
-
-                Command:
-                """ + command;
-    }
-
-    */
-/**
- * Generates a prompt for the packaging clarification assistant to determine if the user's input indicates loose or packet packaging.   
- * @param command
- * @return
- */
-public static String getConfirmationPrompt(String command) {
-    return """
-        You are a packaging clarification assistant for a grocery billing system.
-
-        The user may speak in:
-        - English
-        - Hindi
-        - Hinglish
-
-        Return ONLY a valid JSON object.
-
-        Do not explain.
-        Do not use markdown.
-        Do not use code fences.
-
-        STRICT JSON FORMAT:
-
-        {
-          "isLoose": true
-        }
-
-        Schema:
-        {
-          "isLoose": true/false/null
-        }
-
-        Rules:
-
-        - Set "isLoose" = true if the user means loose, open, unpackaged, or sold by weight.
-        - Set "isLoose" = false if the user means packet, pouch, box, bag, container, bottle, or packed product.
-        - Set "isLoose" = null if the user's response is unclear, unrelated, or does not indicate packaging type.
-
-        LOOSE examples:
-        - loose
-        - open
-        - unpacked
-        - loose item
-        - khula
-        - khulla
-        - khule mein
-        - khula wala
-        - khula do
-        - खुला
-        - खुला वाला
-        - खुला देना
-        - ढीला
-        - बिना पैकेट
-        - packet nahi
-        - pack nahi
-
-        PACKET examples:
-        - packet
-        - packed
-        - pack
-        - pouch
-        - bag
-        - box
-        - bottle
-        - container
-        - packet wala
-        - pack wala
-        - packed item
-        - packet do
-        - packet dena
-        - पैकेट
-        - पैकेट वाला
-        - पैक
-        - पैक वाला
-        - डिब्बा
-        - बोतल
-
-        Examples:
-
-        Input:
-        loose
-
-        Output:
-        {
-          "isLoose": true
-        }
-
-        Input:
-        khula
-
-        Output:
-        {
-          "isLoose": true
-        }
-
-        Input:
-        खुला देना
-
-        Output:
-        {
-          "isLoose": true
-        }
-
-        Input:
-        packet
-
-        Output:
-        {
-          "isLoose": false
-        }
-
-        Input:
-        packet wala
-
-        Output:
-        {
-          "isLoose": false
-        }
-
-        Input:
-        पैकेट
-
-        Output:
-        {
-          "isLoose": false
-        }
-
-        Input:
-        pack wala
-
-        Output:
-        {
-          "isLoose": false
-        }
-
-        Input:
-        jo sahi ho de do
-
-        Output:
-        {
-          "isLoose": null
-        }
-
-        User Input:
-        %s
-        """.formatted(command);
-}
-
-/* 
-    public static String getConfirmationPrompt(String command) {
-        return """
-                You are a packaging clarification assistant for a grocery system.
-                Analyze the user's input and determine if they selected LOOSE or PACKET.
-
-                Return ONLY valid JSON.
-                Do not explain.
-                Do not use markdown.
-                Do not use code fences.
-
-                Schema:
-                {
-                  "isLoose": true/false/null
-                }
-
-                Rules:
-                - Set "isLoose" to true if input means loose or un-packaged.
-                - Set "isLoose" to false if input means packet, container, bag, or boxed packaging.
-                - Set "isLoose" to null if the response is unclear or unrelated.
-
-                Examples:
-
-                Input:
-                loose
-                Output:
-                {"isLoose": true}
-
-                Input:
-                give me packet
-                Output:
-                {"isLoose": false}
-
-                Input:
-                packet form
-                Output:
-                {"isLoose": false}
-
-                Input:
-                open product
-                Output:
-                {"isLoose": true}
-
-                Command:
-                """ + command;
-    }
-
-    */
 
     /**
-     * 
-     * @param command
-     * @return
+     * FUNCTIONAL DOC
+     * Business-facing. No Mule internals, no processor names, no connector
+     * versions. Written for a product owner / BA, not an engineer.
      */
 
-    public static String getPaymentIntentPrompt(String command) {
-    return """
-            You are an intent classification assistant for a retail billing system.
+public static String getFunctionalDocPrompt(String extractedJson) {
 
-            Analyze the user's voice input and determine whether the user wants to proceed with payment.
 
-            Return ONLY a raw valid JSON object.
-            Do not add any explanation.
-            Do not wrap the output in markdown.
+return """
+    TASK
 
-            Schema:
+    You are a Senior Business Analyst.
+
+    Convert the APPLICATION SCANNER JSON provided at the end of this
+    prompt into concise, accurate, business-friendly functional
+    documentation.
+
+    The scanner JSON is the ONLY source of truth.
+
+    ============================================================
+    ABSOLUTE OUTPUT RULE
+    ============================================================
+
+    RETURN ONLY ONE VALID JSON OBJECT.
+
+    DO NOT return the scanner JSON.
+
+    DO NOT copy the scanner JSON.
+
+    DO NOT summarize the scanner JSON.
+
+    DO NOT reproduce scanner fields.
+
+    DO NOT add explanations.
+
+    DO NOT add comments.
+
+    DO NOT add markdown.
+
+    DO NOT use ```json.
+
+    DO NOT use ```.
+
+    DO NOT write "Here is the final JSON".
+
+    DO NOT write "Based on the scanner data".
+
+    DO NOT write any text before or after the JSON.
+
+    The first character MUST be {
+
+    The last character MUST be }
+
+    The output MUST be directly parseable by a JSON parser.
+
+    ============================================================
+    ROOT OUTPUT STRUCTURE
+    ============================================================
+
+    The output MUST contain ONLY these seven root fields:
+
+    {
+      "applicationName": "",
+      "purpose": "",
+      "interfaces": [],
+      "integrations": [],
+      "dataTransformations": [],
+      "knownLimitations": [],
+      "openQuestions": []
+    }
+
+    NEVER add another root field.
+
+    NEVER return scanner fields at the root.
+
+    ============================================================
+    INTERFACE STRUCTURE
+    ============================================================
+
+    For every actual external entry point, create an object inside
+    "interfaces".
+
+    Use this structure:
+
+    {
+      "type": "HTTP|KAFKA|MQ|FILE|SCHEDULE|OTHER",
+      "name": "",
+      "method": "",
+      "path": "",
+      "topic": "",
+      "queue": "",
+      "description": "",
+      "inputs": [
+        {
+          "name": "",
+          "source": "",
+          "required": false,
+          "description": ""
+        }
+      ],
+      "processing": [],
+      "outputs": [
+        {
+          "name": "",
+          "destination": "",
+          "description": ""
+        }
+      ],
+      "outputExample": "",
+      "businessRules": []
+    }
+
+    ============================================================
+    INTEGRATION STRUCTURE
+    ============================================================
+
+    Use this structure only when an actual external integration
+    exists:
+
+    {
+      "type": "KAFKA|MQ|DATABASE|FILE|HTTP|OTHER",
+      "name": "",
+      "direction": "INPUT|OUTPUT|READ|WRITE|CALL|UNKNOWN",
+      "description": "",
+      "source": "",
+      "destination": "",
+      "businessPurpose": ""
+    }
+
+    ============================================================
+    DATA TRANSFORMATION STRUCTURE
+    ============================================================
+
+    Use this structure when actual transformation logic exists:
+
+    {
+      "description": "",
+      "input": "",
+      "output": "",
+      "rules": []
+    }
+
+    ============================================================
+    1. SOURCE OF TRUTH
+    ============================================================
+
+    Use ONLY evidence found in the scanner JSON.
+
+    Never invent:
+
+    - business processes
+    - business capabilities
+    - business meanings
+    - integrations
+    - API behavior
+    - fields
+    - calculations
+    - validation rules
+    - authentication
+    - authorization
+    - retry behavior
+    - error handling
+    - schedules
+    - status codes
+    - response structures
+
+    If something cannot be established from the scanner data,
+    do not invent it.
+
+    ============================================================
+    2. DO NOT COPY SCANNER JSON
+    ============================================================
+
+    The scanner JSON is INPUT, not OUTPUT.
+
+    The following scanner fields MUST NEVER appear in the final
+    documentation:
+
+    eventType
+    eventVersion
+    documentId
+    documentName
+    tenant
+    objectName
+    status
+    apis
+    application
+    connectors
+    flows
+    flowReferences
+    variables
+    transformations
+    dependencies
+    sourceFiles
+    runtimeInfo
+    typeMetadata
+    kafkaTopics
+    mqEndpoints
+    dbOperations
+    fileOperations
+    scannedAt
+
+    IMPORTANT:
+
+    The information from these fields may be used to understand
+    application behavior, but the scanner field itself must not be
+    copied into the output.
+
+    Example:
+
+    Scanner:
+
+    "variables": [
+      {
+        "name": "name",
+        "expression": "#[attributes.queryParams.name]"
+      }
+    ]
+
+    Do NOT output:
+
+    "variables": [...]
+
+    Instead use the information to document:
+
+    "name" is an HTTP query parameter.
+
+    ============================================================
+    3. EMPTY ARRAY RULE
+    ============================================================
+
+    EMPTY ARRAY = NO EVIDENCE.
+
+    Completely ignore empty arrays.
+
+    For example:
+
+    "kafka": []
+
+    means:
+
+    DO NOT create Kafka documentation.
+
+    DO NOT create Kafka integration.
+
+    DO NOT mention Kafka.
+
+    Do not create a negative statement saying Kafka is not used.
+
+    Apply the same rule to:
+
+    kafka
+    mq
+    database
+    file
+    externalHttp
+    kafkaTopics
+    mqEndpoints
+    dbOperations
+    fileOperations
+
+    ============================================================
+    4. INTEGRATION RULE — VERY IMPORTANT
+    ============================================================
+
+    NEVER create an integration without direct evidence.
+
+    KAFKA:
+
+    Create Kafka integration ONLY if:
+
+    integrations.kafka contains one or more entries
+
+    OR
+
+    kafkaTopics contains one or more entries.
+
+    If both are empty:
+
+    "integrations": []
+
+    MQ:
+
+    Create MQ integration ONLY if:
+
+    integrations.mq contains one or more entries
+
+    OR
+
+    mqEndpoints contains one or more entries.
+
+    DATABASE:
+
+    Create Database integration ONLY if:
+
+    integrations.database contains one or more entries
+
+    OR
+
+    dbOperations contains one or more entries.
+
+    FILE:
+
+    Create File integration ONLY if:
+
+    integrations.file contains one or more entries
+
+    OR
+
+    fileOperations contains one or more entries.
+
+    OUTBOUND HTTP:
+
+    Create HTTP integration ONLY if:
+
+    integrations.externalHttp contains one or more entries.
+
+    ============================================================
+    5. ABSOLUTELY NO INTEGRATION INFERENCE
+    ============================================================
+
+    NEVER infer an integration from:
+
+    - application name
+    - artifact name
+    - API name
+    - flow name
+    - dependency
+    - connector
+    - source file
+    - runtime version
+    - variable name
+    - transformation
+    - port number
+    - listener configuration
+
+    Example:
+
+    If:
+
+    "connectors": [
+      {
+        "type": "HTTP"
+      }
+    ]
+
+    this does NOT prove an external HTTP integration.
+
+    Example:
+
+    If:
+
+    "dependencies": {
+      "kafka": ["some-kafka-library"]
+    }
+
+    this does NOT prove Kafka is used.
+
+    Only actual integration evidence can create an integration.
+
+    ============================================================
+    6. APEXHOURS EXAMPLE
+    ============================================================
+
+    If the scanner contains:
+
+    "integrations": {
+      "kafka": [],
+      "mq": [],
+      "database": [],
+      "file": [],
+      "externalHttp": []
+    }
+
+    and:
+
+    "kafkaTopics": [],
+    "mqEndpoints": [],
+    "dbOperations": [],
+    "fileOperations": []
+
+    then the output MUST contain:
+
+    "integrations": []
+
+    NEVER generate:
+
+    {
+      "type": "KAFKA",
+      "name": "kafka"
+    }
+
+    NEVER generate:
+
+    "Publishes hourly data to Kafka topic"
+
+    There is no evidence for this statement.
+
+    ============================================================
+    7. INBOUND HTTP VS OUTBOUND HTTP
+    ============================================================
+
+    The "apis" section represents an INBOUND interface.
+
+    Example:
+
+    "apis": [
+      {
+        "type": "HTTP",
+        "method": "GET",
+        "path": "/test"
+      }
+    ]
+
+    means:
+
+    Client -> Application
+
+    Therefore create an HTTP interface.
+
+    It does NOT mean:
+
+    Application -> External HTTP Service
+
+    Therefore:
+
+    "apis" -> interfaces
+
+    "integrations.externalHttp" -> outbound HTTP integration
+
+    NEVER convert an API into an external HTTP integration.
+
+    The application's:
+
+    - host
+    - port
+    - listener
+    - listener configuration
+    - HTTP method
+    - API path
+
+    are NOT external integrations.
+
+    ============================================================
+    8. APPLICATION NAME
+    ============================================================
+
+    Do not infer business meaning from the application name.
+
+    Example:
+
+    applicationName = "apexhours"
+
+    does NOT prove:
+
+    - employee hours
+    - working hours
+    - time tracking
+    - payroll
+    - attendance
+
+    Use only actual application behavior.
+
+    ============================================================
+    9. PURPOSE
+    ============================================================
+
+    "purpose" must explain:
+
+    WHAT the application receives.
+
+    WHAT it does.
+
+    WHAT it produces.
+
+    Use one or two complete sentences.
+
+    Example:
+
+    "The application accepts a name through a query parameter, uses
+    it to create a greeting message, and returns the message as JSON."
+
+    ============================================================
+    10. INPUTS
+    ============================================================
+
+    Use actual request attributes and variables to identify inputs.
+
+    Example:
+
+    "attributes.queryParams.name"
+
+    means:
+
+    name = HTTP query parameter.
+
+    Document:
+
+    "name": "name"
+
+    "source": "HTTP query parameter: name"
+
+    "required": false
+
+    unless the scanner explicitly proves that the parameter is
+    mandatory.
+
+    Do NOT assume an input is mandatory.
+
+    Do NOT assume an input is optional unless evidence supports it.
+
+    ============================================================
+    11. PROCESSING
+    ============================================================
+
+    Use flows and processing information ONLY to understand the
+    sequence of business processing.
+
+    Do not expose technical implementation details.
+
+    Example:
+
+    Technical:
+
+    set-variable -> flow-reference -> transformation
+
+    Business description:
+
+    "The application captures the supplied name, creates the
+    greeting message, and prepares the response."
+
+    Each processing item must be a complete sentence.
+
+    BAD:
+
+    "Processes request."
+
+    GOOD:
+
+    "The application receives the request at the specified endpoint."
+
+    ============================================================
+    12. TRANSFORMATIONS
+    ============================================================
+
+    Analyze every populated transformation.
+
+    Transformation logic is important evidence of actual behavior.
+
+    Example:
+
+    "logic": "{ message: \"Hello world this is \" ++ vars.name }"
+
+    means:
+
+    The supplied name is appended to the fixed greeting text and
+    placed in the message field.
+
+    Do NOT output:
+
+    "++ vars.name"
+
+    Do NOT output:
+
+    "DataWeave transformation"
+
+    Translate the behavior into business language.
+
+    ============================================================
+    13. BUSINESS RULES
+    ============================================================
+
+    Derive business rules from actual application logic.
+
+    Valid examples:
+
+    - concatenation
+    - conditional logic
+    - default values
+    - calculations
+    - filtering
+    - field mapping
+    - field selection
+    - routing
+    - formatting
+
+    Example:
+
+    "message = 'Hello world this is ' + name"
+
+    Business rule:
+
+    "The supplied name is appended to the fixed greeting text."
+
+    Never invent business rules.
+
+    ============================================================
+    14. OUTPUT
+    ============================================================
+
+    Document only output fields supported by:
+
+    - transformation logic
+    - output schema
+    - explicit response information
+
+    Example:
+
+    If the scanner contains:
+
+    "schema": {
+      "message": "String"
+    }
+
+    then document:
+
+    message
+
+    Do NOT invent:
+
+    employeeId
+    customerId
+    orderId
+    hours
+    status
+    timestamp
+
+    unless scanner evidence supports them.
+
+    ============================================================
+    15. OUTPUT EXAMPLE
+    ============================================================
+
+    Create outputExample from actual transformation behavior.
+
+    Example:
+
+    Input:
+
+    name = John
+
+    Transformation:
+
+    message = "Hello world this is " + name
+
+    Output:
+
+    {"message":"Hello world this is John"}
+
+    Therefore:
+
+    "outputExample": "{\"message\":\"Hello world this is John\"}"
+
+    Do not put implementation expressions into outputExample.
+
+    ============================================================
+    16. DATA TRANSFORMATIONS
+    ============================================================
+
+    Add a dataTransformation when actual transformation logic exists.
+
+    Explain:
+
+    - what the input is
+    - what the output is
+    - how the value changes
+    - the actual rule applied
+
+    Do not expose technical expressions.
+
+    ============================================================
+    17. KNOWN LIMITATIONS
+    ============================================================
+
+    Include only meaningful limitations supported by the scanner.
+
+    Examples:
+
+    "The scanner data does not explicitly establish whether the name
+    parameter is mandatory."
+
+    "No input validation rules are evident from the available data."
+
+    "The error response behavior is not defined in the available data."
+
+    Do NOT create limitations just because an integration array is
+    empty.
+
+    Do NOT say:
+
+    "Kafka configuration is unavailable."
+
+    ============================================================
+    18. OPEN QUESTIONS
+    ============================================================
+
+    Add questions only when important behavior cannot be determined.
+
+    Example:
+
+    "Should the name parameter be mandatory?"
+
+    Do NOT ask:
+
+    "What is the Kafka topic?"
+
+    when kafka is empty.
+
+    Do NOT create questions about integrations with no evidence.
+
+    ============================================================
+    19. BUSINESS LANGUAGE
+    ============================================================
+
+    The final output is for:
+
+    - business stakeholders
+    - product owners
+    - QA teams
+    - support teams
+    - API consumers
+
+    Do not mention technical implementation terms such as:
+
+    MuleSoft
+    Mule
+    DataWeave
+    Java
+    connector
+    processor
+    flow
+    flow reference
+    implementation expression
+
+    Translate technical behavior into understandable business
+    language.
+
+    ============================================================
+    20. SENTENCE QUALITY
+    ============================================================
+
+    Every description MUST be a complete grammatical sentence.
+
+    BAD:
+
+    "Retrieves greeting message from query parameter."
+
+    "Name from query parameter."
+
+    "JSON response."
+
+    "Processes request."
+
+    GOOD:
+
+    "The application accepts a name through the HTTP query parameter."
+
+    "The supplied name is used to create the greeting message."
+
+    "The application returns the generated message as a JSON response."
+
+    ============================================================
+    21. AVOID REPETITION
+    ============================================================
+
+    Use each section for a different purpose.
+
+    purpose:
+    Overall application behavior.
+
+    interface description:
+    What the interface does.
+
+    processing:
+    Sequence of actual actions.
+
+    businessRules:
+    Rules applied to data.
+
+    dataTransformations:
+    How input becomes output.
+
+    Do not repeat the same sentence in every section.
+
+    ============================================================
+    22. DO NOT CREATE YOUR OWN STRUCTURE
+    ============================================================
+
+    NEVER create sections such as:
+
+    "business language": {}
+
+    "input required flags": {}
+
+    "output examples": {}
+
+    "processing": {}
+
+    "integrations": {}
+
+    "scannerData": {}
+
+    "technicalDetails": {}
+
+    "analysis": {}
+
+    Use ONLY the required structure.
+
+    "processing" is an array inside an interface.
+
+    "businessRules" is an array inside an interface.
+
+    "integrations" is an array at the root.
+
+    ============================================================
+    23. FINAL VALIDATION
+    ============================================================
+
+    Before returning the answer, verify:
+
+    1. Output is JSON only.
+    2. Output starts with {.
+    3. Output ends with }.
+    4. Output has only the seven required root fields.
+    5. Scanner JSON is not copied.
+    6. Scanner metadata is not returned.
+    7. Empty arrays are ignored.
+    8. No integration is invented.
+    9. Empty Kafka means no Kafka integration.
+    10. Empty MQ means no MQ integration.
+    11. Empty database means no database integration.
+    12. Empty file means no file integration.
+    13. Empty externalHttp means no outbound HTTP integration.
+    14. Inbound APIs are interfaces.
+    15. APIs are never external integrations.
+    16. Dependencies do not prove integrations.
+    17. Connectors do not prove integrations.
+    18. Application name does not prove business meaning.
+    19. Transformation logic is used to derive business rules.
+    20. Output fields are not invented.
+    21. Required flags are not invented.
+    22. Technical implementation syntax is not returned.
+    23. Every sentence is grammatically complete.
+    24. No explanation is returned before or after JSON.
+
+    If any output statement is not supported by scanner evidence,
+    REMOVE IT.
+
+    ============================================================
+    APPLICATION SCANNER JSON
+    ============================================================
+
+    %s
+
+    ============================================================
+    END APPLICATION SCANNER JSON
+    ============================================================
+
+    Return ONLY the functional documentation JSON.
+    """.formatted(extractedJson);
+
+
+}
+
+
+    /**
+     * TECHNICAL DOC
+     * Engineer-facing. Runtime, dependencies, config, deployment constraints.
+     */
+    public static String getTechnicalDocPrompt(String extractedJson) {
+        return """
+            You are a senior platform engineer documenting the technical footprint of
+            an existing Mule application ahead of a Java re-engineering effort. Return
+            ONLY valid JSON. No markdown, no code fences, no text outside the JSON.
+
+            Required JSON shape:
             {
-              "intent": "TAKE_PAYMENT | UNKNOWN"
+              "runtime": {
+                "muleVersion": "...",
+                "javaVersion": "...",
+                "buildTool": "..."
+              },
+              "dependencies": [ { "name": "...", "version": "...", "usedBy": [] } ],
+              "connectors": [ { "type": "...", "version": "...", "referencedInFlows": [] } ],
+              "configProperties": [],
+              "deploymentConstraints": [],
+              "unusedDependencies": [],
+              "openQuestions": []
             }
 
-            Rules:
-            - If the user wants to pay, checkout, bill, complete payment, or collect payment, return TAKE_PAYMENT.
-            - Support Hindi, English, and Hinglish.
-            - If the meaning is unclear, return UNKNOWN.
+            GROUNDING RULES:
+            - Populate every field only from values literally present in the input
+              JSON (muleRuntime, javaSpecificationVersions, dependencies, connectors
+              arrays). Do not assume a build tool, port, or deployment target that
+              isn't stated -- use openQuestions instead.
+            - "usedBy" / "referencedInFlows": cross-reference the dependency/connector
+              against the flows/processors list. If a connector (e.g. SOCKETS) appears
+              in dependencies but is never referenced by any flow or processor, put it
+              in "unusedDependencies" instead of "connectors", and do not invent a
+              purpose for it.
+            - "deploymentConstraints" should only list constraints directly implied by
+              runtime fields (e.g. minimum Mule version, required Java version). Do not
+              invent infrastructure requirements (memory, scaling, cloud provider) not
+              present in the input.
+            - "configProperties": only include if explicit config/property references
+              exist in the input. If none exist, return an empty array.
 
-            Examples:
-
-            Input:
-            Take payment
-            Output:
-            {"intent":"TAKE_PAYMENT"}
-
-            Input:
-            Payment kar do
-            Output:
-            {"intent":"TAKE_PAYMENT"}
-
-            Input:
-            Bill bana do
-            Output:
-            {"intent":"TAKE_PAYMENT"}
-
-            Input:
-            Checkout
-            Output:
-            {"intent":"TAKE_PAYMENT"}
-
-            Input:
-            Pay now
-            Output:
-            {"intent":"TAKE_PAYMENT"}
-
-            Input:
-            UPI se payment le lo
-            Output:
-            {"intent":"TAKE_PAYMENT"}
-
-            Input:
-            Cart dikhao
-            Output:
-            {"intent":"UNKNOWN"}
-
-            User Input:
-            """
-            + command;
-}
-  /**
-   * 
-   * @param command
-   * @return
-   */  
-    
-    public static String getBrandSelectionPrompt(String command) {
-        return """
-                You are a brand selection assistant for a retail billing system.
-                Analyze the user's voice input to determine which brand or list option number they selected.
-
-                Return ONLY a raw, valid JSON object.
-                Do not add any explanation or prose.
-                Do not wrap the output in markdown or triple-backtick code fences (```).
-
-                Schema:
-                {
-                  "brand": "string containing the extracted brand name or the list index number"
-                }
-
-                Rules:
-                - If the user names a specific brand (e.g., "Aashirvaad", "Fortune", "Tata"), extract that exact name.
-                - If the user specifies an option number (e.g., "first one", "number 2", "pehla waala"), extract the number (e.g., "1", "2").
-                - If the input is completely ambiguous or unrelated, set "brand" to null.
-
-                Examples:
-
-                Input:
-                Aashirwad
-                Output:
-                {"brand": "Aashirwad"}
-
-                Input:
-                Pehla waala dedo
-                Output:
-                {"brand": "1"}
-
-                Command:
-                """
-                + command;
+            Extracted application data:
+            %s
+            """.formatted(extractedJson);
     }
 
-    /**
-     * 
-     * @param command
-     * @return
+
+       /**
+     * FLOW DOC
+     * Structural diagram of flow -> sub-flow -> processor relationships,
+     * rendered as Mermaid flowchart syntax.
      */
+    public static String getFlowDocPrompt(String extractedJson) {
+        return """
+            You are a software architect producing a flow diagram of an existing Mule
+            application for a re-engineering effort. Return ONLY valid JSON. No
+            markdown, no code fences, no text outside the JSON.
 
-    public static String getConsentPrompt(String command) {
-      return """
-          You are a consent classification assistant for a retail grocery billing system.
+            Required JSON shape:
+            {
+              "flowSummary": [
+                { "flowName": "...", "trigger": "...", "processorSequence": [], "calls": [] }
+              ],
+              "mermaidFlowchart": "flowchart TD\\n..."
+            }
 
-          The user may speak in:
-          - English
-          - Hindi
-          - Hinglish
+            GROUNDING RULES:
+            - "processorSequence" must exactly match the order of the "processors"
+              array for that flow in the input. Do not reorder, merge, or omit steps.
+            - "calls" must exactly match entries in "flowReferences" / "references" for
+              that flow. Do not invent calls to flows that aren't listed.
+            - "mermaidFlowchart" must be valid Mermaid flowchart syntax (flowchart TD),
+              with one node per processor step and one node per flow. Use flow names
+              and processor names as node labels -- do not use generic labels like
+              "Step 1" / "Process Data".
+            - Represent an HTTP trigger as a distinct starting node labeled with its
+              method and path (e.g. "GET /test").
+            - Represent a flow-ref / flow call as an edge from the calling processor
+              node to the target flow's first node.
+            - Do not add error-handling branches, retries, or decision diamonds unless
+              the input data shows an actual choice/error-handler processor. A straight
+              line flow stays a straight line flow.
 
-          Analyze the user's voice input and determine whether the user is giving consent.
-
-          Return ONLY a valid JSON object.
-
-          Do not explain.
-          Do not use markdown.
-          Do not use code fences.
-
-          Schema:
-          {
-            "consent":"YES|NO|UNKNOWN"
-          }
-
-          Rules:
-
-          - Return "YES" if the user agrees, confirms, accepts, allows, or wants to continue.
-          - Return "NO" if the user refuses, rejects, declines, cancels, skips, or does not want to continue.
-          - Return "UNKNOWN" if the response is unrelated, unclear, or consent cannot be determined.
-
-          YES words (English):
-          yes
-          yeah
-          yep
-          ok
-          okay
-          sure
-          proceed
-          continue
-          confirm
-          go ahead
-          do it
-          accept
-          apply
-          use wallet
-
-          YES words (Hinglish):
-          haan
-          han
-          ha
-          haa
-          haan ji
-          ji haan
-          theek hai
-          thik hai
-          bilkul
-          zaroor
-          kar do
-          kar dijiye
-          karo
-          chalo
-          chaliye
-          use karo
-          apply karo
-          wallet use karo
-          wallet laga do
-
-          YES words (Hindi):
-          हाँ
-          हां
-          जी
-          जी हाँ
-          हाँ जी
-          बिल्कुल
-          ज़रूर
-          ठीक है
-          कर दो
-          कर दीजिए
-          करिए
-          आगे बढ़ो
-          आगे बढ़िए
-          स्वीकार है
-          वॉलेट इस्तेमाल करो
-          वॉलेट लगा दो
-          भुगतान करो
-          पेमेंट करो
-
-          NO words (English):
-          no
-          nope
-          cancel
-          stop
-          skip
-          don't
-          do not
-          not now
-          never
-          reject
-
-          NO words (Hinglish):
-          nahi
-          nahin
-          na
-          mat karo
-          cancel karo
-          skip karo
-          rehne do
-          chod do
-          chhod do
-          nahi chahiye
-          nahi karna
-          wallet mat lagao
-
-          NO words (Hindi):
-          नहीं
-          ना
-          मत
-          मत करो
-          मत कीजिए
-          रहने दो
-          छोड़ दो
-          रद्द करो
-          रद्द कर दो
-          नहीं चाहिए
-          नहीं करना
-          वॉलेट मत लगाओ
-          भुगतान मत करो
-
-          UNKNOWN words:
-          maybe
-          later
-          what
-          hmm
-          pata nahi
-          repeat
-          repeat karo
-          fir se bolo
-          samajh nahi aaya
-          शायद
-          पता नहीं
-          बाद में
-          फिर से बोलो
-          दोबारा बोलो
-          समझ नहीं आया
-          क्या
-          हम्म
-
-          Examples:
-
-          Input:
-          Yes
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          Haan
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          Haan ji
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          Ok
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          Proceed
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          Apply wallet
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          हाँ
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          जी हाँ
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          बिल्कुल
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          ठीक है
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          कर दो
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          वॉलेट इस्तेमाल करो
-          Output:
-          {"consent":"YES"}
-
-          Input:
-          No
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          Nahi
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          Cancel
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          Skip
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          Mat karo
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          नहीं
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          मत करो
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          रद्द करो
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          नहीं चाहिए
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          वॉलेट मत लगाओ
-          Output:
-          {"consent":"NO"}
-
-          Input:
-          Maybe
-          Output:
-          {"consent":"UNKNOWN"}
-
-          Input:
-          Pata nahi
-          Output:
-          {"consent":"UNKNOWN"}
-
-          Input:
-          Repeat karo
-          Output:
-          {"consent":"UNKNOWN"}
-
-          Input:
-          Hmm
-          Output:
-          {"consent":"UNKNOWN"}
-
-          Input:
-          पता नहीं
-          Output:
-          {"consent":"UNKNOWN"}
-
-          Input:
-          फिर से बोलो
-          Output:
-          {"consent":"UNKNOWN"}
-
-          Input:
-          समझ नहीं आया
-          Output:
-          {"consent":"UNKNOWN"}
-
-          User Input:
-          """
-          + command;
+            Extracted application data:
+            %s
+            """.formatted(extractedJson);
     }
 
+     /**
+     * SEQUENCE DOC
+     * Caller -> Listener -> Flow -> Sub-flow -> Transform -> Response,
+     * rendered as Mermaid sequenceDiagram syntax.
+     */
+    public static String getSequenceDocPrompt(String extractedJson) {
+        return """
+            You are a software architect producing a sequence diagram of a single
+            request/response cycle through an existing Mule application. Return ONLY
+            valid JSON. No markdown, no code fences, no text outside the JSON.
+
+            Required JSON shape:
+            {
+              "participants": [],
+              "steps": [
+                { "from": "...", "to": "...", "action": "...", "note": "..." }
+              ],
+              "mermaidSequenceDiagram": "sequenceDiagram\\n..."
+            }
+
+            GROUNDING RULES:
+            - "participants" must be derived only from actual actors in the input:
+              the HTTP caller, the listener/flow, any referenced sub-flow, and the
+              transformation step. Do not add participants like "Database" or
+              "External API" unless the input's integrations arrays are non-empty.
+            - Each entry in "steps" must correspond to a real processor or flow-ref in
+              the input, in the order given by the "processors" array. Do not add
+              synthetic steps (e.g. "Validate Input", "Log Error") that aren't backed
+              by an actual processor of that kind in the data.
+            - If the input shows a "transform" processor with DataWeave logic, include
+              one step for it and put the actual (paraphrased, not verbatim) effect of
+              the expression in "note" -- e.g. note that it builds a JSON message
+              incorporating a query parameter, referencing the real variable name.
+            - "mermaidSequenceDiagram" must be valid Mermaid sequenceDiagram syntax,
+              matching the same actors and steps as above one-to-one. End the diagram
+              with the response returned to the caller, using the actual output
+              mimeType/schema from typeMetadata if present.
+            - If there is only one flow and one sub-flow with no branching, the diagram
+              must be a single linear path -- do not add alt/opt blocks that aren't
+              justified by real conditional processors in the input.
+
+            Extracted application data:
+            %s
+            """.formatted(extractedJson);
+    }
+
+ 
+
+
+
+
+
+   
 }
+

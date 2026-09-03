@@ -40,7 +40,8 @@ document:
 ollama:
   url: http://localhost:11434/api/generate
   embeddings-url: http://localhost:11434/api/embeddings
-  model: llama3.2:3b  
+  model: llama3.2:3b
+  #model: qwen3:4b   
   emd-model:  nomic-embed-text
 
 
