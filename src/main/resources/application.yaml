@@ -1,0 +1,54 @@
+server:
+  port: 5056
+
+
+spring:
+  application:
+    name: mulemind-ai-service
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:mulemind-ai-service-group-dev}
+      auto-offset-reset: latest
+      enable-auto-commit: true
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.mulemind.ai.dto.DocumentKafkaEvent
+
+
+app:
+  kafka:
+    topic:
+      mulemind-scan-event: mules-scan-completed
+      mulemind-metadata-generated-event: mules-metadata-generated
+
+
+document:
+  service:
+    url: http://localhost:5054
+
+
+ollama:
+  url: http://localhost:11434/api/generate
+  embeddings-url: http://localhost:11434/api/embeddings
+  model: llama3.2:3b  
+  emd-model:  nomic-embed-text
+
+
+# Qdrant Database Configuration
+qdrant:
+  host: localhost
+  port: 6334
+  use-tls: false
+  collection-name: products
+  # If your server requires authentication, uncomment the line below:
+  # api-key: your_secret_api_key   
