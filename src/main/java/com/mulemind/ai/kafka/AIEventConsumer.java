@@ -4,7 +4,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
+import com.mulemind.ai.client.JobServiceClient;
 import com.mulemind.ai.dto.ProjectScanResultEvent;
+
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -13,7 +16,7 @@ public class AIEventConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(AIEventConsumer.class);
     private final AIKafkaProducer aiKafkaProducer;
-   // private final JobServiceClient jobServiceClient;
+    private final JobServiceClient jobServiceClient;
 
     @Value("${app.kafka.topic.mulemind-scan-event}")
     private String topic;
@@ -21,6 +24,7 @@ public class AIEventConsumer {
 
     @KafkaListener(topics = "${app.kafka.topic.mulemind-scan-event}", groupId = "${spring.kafka.consumer.group-id}")
     public void onProjectUploaded(ProjectScanResultEvent scanEvent) {
+        log.info("Received project scan event for document {} from topic {}", scanEvent != null ? scanEvent.getDocumentId() : null, topic);
         handleEvent(scanEvent, topic);
     }
 
@@ -30,6 +34,7 @@ public class AIEventConsumer {
             return;
         }
 
-      
+        log.info("Project scan event received: documentId={}, status={}, eventType={}",
+                scanEvent.getDocumentId(), scanEvent.getStatus(), scanEvent.getEventType());
     }
 }
