@@ -42,37 +42,24 @@ public class AIEventConsumer {
             return;
         }
 
-       // Map<String, String> payload = new HashMap<>();
-        //payload.put("status", TransformationStatus.METADATA_PROCESSING.name());
-        //payload.put("description", TransformationStatus.METADATA_PROCESSING.getDescription());
-        //jobServiceClient.updateJobStatus(scanEvent.getDocumentId(), payload);
-         //updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
+   
          updateJobStatus(scanEvent, TransformationStatus.AI_ANALYZING);    
         try {
-
-            String documentation = ollamaService.generateApplicationDocumentation(scanEvent,DocumentationType.FUNCTIONAL_DOC);
-           
-           
+            String documentation = ollamaService.generateApplicationDocumentation(scanEvent,DocumentationType.FUNCTIONAL_DOC);                
             MetadataGeneratedEvent generatedEvent = MetadataGeneratedEvent.builder()
                     .eventVersion(scanEvent.getEventVersion())
                     .documentId(scanEvent.getDocumentId())
                     .documentName(scanEvent.getDocumentName())
                     .tenant(scanEvent.getTenant())
-                    .metadata(scanEvent)
                     .documentation(documentation)
                     .build();
 
             aiKafkaProducer.send(generatedEvent, scanEvent.getDocumentId().toString());
-            updateJobStatus(scanEvent, TransformationStatus.AI_ANALYSIS_COMPLETED);
-            updateJobStatus(scanEvent, TransformationStatus.DOCUMENT_COMPLETED);
+            updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
         } catch (RuntimeException exception) {
             log.error("Failed to process scan event for document {}", scanEvent.getDocumentId(), exception);
             updateJobStatus(scanEvent, TransformationStatus.FAILED);
         }
-
-
-
-        // Log the received event details
 
         log.info("Project scan event received: documentId={}, status={}, eventType={}",
                 scanEvent.getDocumentId(), scanEvent.getStatus(), scanEvent.getEventType());

@@ -18,9 +18,9 @@ public class MetadataGeneratedEvent {
     private String eventType = "MULE_APPLICATION_METADATA_GENERATED";
     private String eventVersion;
     private UUID documentId;
+    private String documentationType;
     private String documentName;
     private String tenant;
-    private ProjectScanResultEvent metadata;
     private String documentation;
 
     @Builder.Default
