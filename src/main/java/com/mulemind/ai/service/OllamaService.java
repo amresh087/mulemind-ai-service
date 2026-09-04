@@ -48,16 +48,18 @@ public class OllamaService {
             String metadataJson = mapper.writeValueAsString(scanEvent);
             String prompt = null;
 
-            if (docType == DocumentationType.TECHNICAL_DOC) {
-                prompt = PromptHelper.getTechnicalDocPrompt(metadataJson);
-            } else if (docType == DocumentationType.FLOW_DOC) {
+            if (docType == DocumentationType.FUNCTIONAL_DOC) {
+                prompt = PromptHelper.getFunctionalDocPrompt(metadataJson);
+            } 
+            /* 
+            else if (docType == DocumentationType.FLOW_DOC) {
                 prompt = PromptHelper.getFlowDocPrompt(metadataJson);
             } else if (docType == DocumentationType.SEQUENCE_DOC) {
                 prompt = PromptHelper.getSequenceDocPrompt(metadataJson);
-            }else if (docType == DocumentationType.FUNCTIONAL_DOC) {
-                prompt = PromptHelper.getFunctionalDocPrompt(metadataJson);
+            }else if(docType == DocumentationType.TECHNICAL_DOC){
+                 prompt = PromptHelper.getTechnicalDocPrompt(metadataJson);
             }
-
+             */
             System.out.println("=============== Generated Prompt for Ollama: " + prompt);
             
             if (prompt == null) {

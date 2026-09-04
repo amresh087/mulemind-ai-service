@@ -45,17 +45,22 @@ public class AIEventConsumer {
    
          updateJobStatus(scanEvent, TransformationStatus.AI_ANALYZING);    
         try {
-            String documentation = ollamaService.generateApplicationDocumentation(scanEvent,DocumentationType.FUNCTIONAL_DOC);                
-            MetadataGeneratedEvent generatedEvent = MetadataGeneratedEvent.builder()
-                    .eventVersion(scanEvent.getEventVersion())
-                    .documentId(scanEvent.getDocumentId())
-                    .documentName(scanEvent.getDocumentName())
-                    .tenant(scanEvent.getTenant())
-                    .documentation(documentation)
-                    .build();
+            for (DocumentationType documentationType : DocumentationType.values()) {
+                String documentation = ollamaService.generateApplicationDocumentation(scanEvent, documentationType);
+                MetadataGeneratedEvent generatedEvent = MetadataGeneratedEvent.builder()
+                        .eventVersion(scanEvent.getEventVersion())
+                        .documentId(scanEvent.getDocumentId())
+                        .documentName(scanEvent.getDocumentName())
+                        .documentationType(documentationType.name())
+                        .tenant(scanEvent.getTenant())
+                        .documentation(documentation)
+                        .build();
+                updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
+                aiKafkaProducer.send(generatedEvent, scanEvent.getDocumentId().toString());
+            }
 
-            aiKafkaProducer.send(generatedEvent, scanEvent.getDocumentId().toString());
-            updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
+             updateJobStatus(scanEvent, TransformationStatus.DONE);
+           
         } catch (RuntimeException exception) {
             log.error("Failed to process scan event for document {}", scanEvent.getDocumentId(), exception);
             updateJobStatus(scanEvent, TransformationStatus.FAILED);

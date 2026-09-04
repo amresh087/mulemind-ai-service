@@ -7,6 +7,7 @@ public enum TransformationStatus {
     AI_ANALYZING("Running AI analysis on the code"),
     DOCUMENT_GENERATING("Generating documentation from analysis"),
     COMPLETED("Workflow completed successfully"),
+    DONE("All flow is done successfully"),
     FAILED("The workflow ended with an error");
 
     private final String description;
