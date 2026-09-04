@@ -27,7 +27,7 @@ public class AIController {
     @PostMapping("/intent")
     public String getIntent(@RequestBody AIRequest request, @RequestParam(required = false) String sessionMode) {
         // We pass the sessionMode flag from the frontend directly to the service layer
-        return ollamaService.processUnified(request.getCommand(), sessionMode);
+        return null;
     }
 
     @PostMapping("/embeddings")

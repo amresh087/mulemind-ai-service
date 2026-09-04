@@ -22,7 +22,7 @@ spring:
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
         spring.json.trusted.packages: "*"
         spring.json.use.type.headers: false
-        spring.json.value.default.type: com.mulemind.ai.dto.DocumentKafkaEvent
+        spring.json.value.default.type: com.mulemind.ai.dto.ProjectScanResultEvent
 
 
 app:
@@ -40,7 +40,8 @@ document:
 ollama:
   url: http://localhost:11434/api/generate
   embeddings-url: http://localhost:11434/api/embeddings
-  model: llama3.2:3b  
+  model: llama3.2:3b
+  #model: qwen3:4b   
   emd-model:  nomic-embed-text
 
 
