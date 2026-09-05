@@ -12,52 +12,30 @@ public class PromptHelper {
 public static String getFunctionalDocPrompt(String extractedJson) {
 
     return """
-    You are a Senior Business Analyst documenting the functional behavior of
-    a Java Spring Boot microservice migrated from a Mule application.
-
-    Convert the supplied scanner metadata and sequence documentation into
-    concise, accurate, business-friendly functional documentation.
+    You are a Senior Business Analyst generating FUNCTIONAL_DOC for a
+    Java Spring Boot microservice migrated from a Mule application.
 
     ====================
-    SOURCE OF TRUTH
+    ABSOLUTE OUTPUT RULE
     ====================
-    Use ONLY evidence present in the supplied JSON.
 
-    You may use:
-    - application scanner metadata
-    - API/interface information
-    - integration information
-    - transformation information
-    - sequence/documentation information
-    - error information, when explicitly available
-
-    Never invent or assume:
-    - business behavior
-    - business capability
-    - fields
-    - validations
-    - calculations
-    - authentication/authorization
-    - integrations
-    - retries
-    - schedules
-    - errors/status codes
-    - response structures
-    - business rules
-
-    Empty arrays mean there is no evidence. Ignore them.
-
-    ====================
-    OUTPUT
-    ====================
     Return ONLY one valid JSON object.
 
-    No markdown, code fences, explanations, comments, analysis, or text before
-    or after the JSON.
+    Do NOT:
+    - explain anything
+    - repeat this prompt
+    - describe documentation rules
+    - output markdown
+    - output headings
+    - output scanner JSON
+    - output analysis
+    - output comments
+    - output text before or after JSON
 
-    The first character must be '{' and the last character must be '}'.
+    First character must be {
+    Last character must be }
 
-    Root object MUST contain exactly these fields:
+    The root object MUST contain exactly these TEN fields:
 
     {
       "applicationName": "",
@@ -72,85 +50,75 @@ public static String getFunctionalDocPrompt(String extractedJson) {
       "openQuestions": []
     }
 
-    Do not create any additional root fields.
+    Do not add, remove, or rename root fields.
 
     ====================
-    APPLICATION NAME
+    SOURCE OF TRUTH
     ====================
-    Populate applicationName only when the application name is explicitly
-    available in the supplied evidence.
 
-    Do not infer a business name from technical names.
+    Use ONLY evidence from the supplied scanner metadata.
+
+    Never invent:
+    - business behavior
+    - business capability
+    - inputs
+    - outputs
+    - validations
+    - calculations
+    - integrations
+    - retries
+    - schedules
+    - errors
+    - status codes
+    - business rules
+
+    Empty arrays mean there is no evidence.
 
     ====================
-    PURPOSE
+    PREVIOUS DOCUMENTATION
     ====================
-    Describe in 1-2 sentences:
-    1. What the application receives.
-    2. What it does.
-    3. What it produces.
 
-    Base this only on explicit evidence.
+    If the input contains a "documentation" field containing previously
+    generated documentation, IGNORE IT.
 
-    Do not infer business meaning from the application name.
+    Never copy previous FUNCTIONAL_DOC content.
 
     ====================
-    BUSINESS CAPABILITY
+    APPLICATION
     ====================
-    Describe the business capability provided by the application in concise,
-    business-friendly language.
 
-    Only populate this when the capability can be directly established from
-    the available evidence.
+    applicationName:
+    Use only an explicitly provided application name.
 
-    Do NOT infer a business capability from:
-    - application name alone
-    - technical flow names
-    - class names
-    - connector names
-    - dependencies
-    - generic technical behavior
+    purpose:
+    Describe what the application receives, does, and produces.
+    Use only supported evidence.
 
-    If the evidence only establishes technical behavior and does not establish
-    a meaningful business capability, use an empty string.
-
-    Example:
-      "Customer information retrieval"
+    businessCapability:
+    Describe the business capability only when it is directly supported.
+    Do not infer it from technical names alone.
 
     ====================
     BUSINESS FLOW
     ====================
-    Describe the end-to-end business flow in execution order.
 
-    businessFlow MUST be an array of concise complete sentences.
+    businessFlow must contain concise complete sentences in actual execution
+    order.
 
-    Each item should represent a meaningful business step supported by the
-    evidence.
+    Use only supported processing steps.
 
-    Example:
-    [
-      "The customer submits a request to retrieve customer information.",
-      "The application uses the supplied name to construct the required message.",
-      "The customer processing operation is executed.",
-      "The processed customer information is returned to the caller."
-    ]
-
-    Use sequence documentation when available.
-
-    Do not copy technical participants, Mermaid syntax, flow names, processor
-    names, implementation expressions, or internal orchestration details.
-
-    Do not invent business steps.
+    Do not copy technical implementation details.
 
     ====================
     INTERFACES
     ====================
-    Create an interface for every actual external entry point.
 
-    Structure:
+    Create one interface for each actual external entry point.
+
+    Each interface may contain:
 
     {
-      "type": "HTTP|KAFKA|MQ|FILE|SCHEDULE|OTHER",
+      "type": "",
       "name": "",
       "method": "",
       "path": "",
@@ -166,26 +134,18 @@ public static String getFunctionalDocPrompt(String extractedJson) {
 
     Populate only fields supported by evidence.
 
-    For HTTP APIs:
-      External Client -> Application
+    HTTP inbound APIs are interfaces.
 
-    Therefore inbound APIs belong in "interfaces".
-
-    Never create an outbound HTTP integration merely because an HTTP API
-    exists.
+    Do NOT treat an inbound HTTP listener as an outbound HTTP integration.
 
     ====================
     INPUTS
     ====================
-    Derive inputs from actual request parameters, payloads, attributes,
-    variables, and interface evidence.
 
-    Example:
-      attributes.queryParams.name
+    Derive inputs only from actual request parameters, payloads, attributes,
+    variables, schemas, or explicit scanner evidence.
 
-    means the caller supplies "name" as an HTTP query parameter.
-
-    Structure:
+    Input structure:
 
     {
       "name": "",
@@ -194,50 +154,32 @@ public static String getFunctionalDocPrompt(String extractedJson) {
       "description": ""
     }
 
-    Set required=true ONLY when the source explicitly proves the input is
-    mandatory.
-
-    Otherwise use false.
+    required=true ONLY when mandatory behavior is explicitly proven.
 
     ====================
     PROCESSING
     ====================
-    Use scanner processing and sequence documentation to describe the actual
-    execution order.
 
-    Convert technical implementation into business language.
+    Processing must be specific to the corresponding interface/flow.
 
-    Example:
+    Do NOT copy processing from another interface.
 
-      variable -> transformation -> subflow -> response
+    Do NOT use generic processing such as:
 
-    becomes:
+    "The application processes the request."
 
-      "The application captures the supplied name, constructs the greeting,
-       processes the request, and prepares the response."
+    unless that is genuinely all the evidence supports.
 
-    Each processing item must be a complete sentence.
-
-    Do not expose:
-    - MuleSoft
-    - Mule
-    - DataWeave
-    - flow references
-    - processors
-    - connectors
-    - implementation expressions
-    - internal orchestration
+    Convert technical implementation into concise business language.
 
     ====================
     OUTPUTS
     ====================
-    Document only output fields supported by:
-    - transformation logic
-    - response/schema information
-    - scanner evidence
-    - sequence documentation
 
-    Structure:
+    Outputs must be derived from the transformation, response, schema, or
+    scanner evidence belonging to the SAME interface.
+
+    Output structure:
 
     {
       "name": "",
@@ -245,79 +187,29 @@ public static String getFunctionalDocPrompt(String extractedJson) {
       "description": ""
     }
 
-    Do not invent output fields.
+    Never assume every API returns "message".
 
-    outputExample must be a realistic example derived from actual behavior.
+    ====================
+    OUTPUT EXAMPLE
+    ====================
+
+    outputExample must be valid JSON when an example is possible.
 
     Example:
 
-      Input name = John
-      Output = {"message":"Hello world this is John"}
+    {"message":"Hello John"}
 
-    Never put implementation expressions in outputExample.
+    Property names MUST be quoted.
 
-    ====================
-    INTEGRATIONS
-    ====================
-    Create an integration ONLY when explicit evidence exists.
+    Do not invent values or fields.
 
-    Structure:
-
-    {
-      "type": "KAFKA|MQ|DATABASE|FILE|HTTP|OTHER",
-      "name": "",
-      "direction": "INPUT|OUTPUT|READ|WRITE|CALL|UNKNOWN",
-      "description": "",
-      "source": "",
-      "destination": "",
-      "businessPurpose": ""
-    }
-
-    Evidence:
-
-    Kafka:
-      integrations.kafka OR kafkaTopics is non-empty.
-
-    MQ:
-      integrations.mq OR mqEndpoints is non-empty.
-
-    Database:
-      integrations.database OR dbOperations is non-empty.
-
-    File:
-      integrations.file OR fileOperations is non-empty.
-
-    HTTP:
-      integrations.externalHttp is non-empty.
-
-    Never infer an integration from:
-    - application name
-    - API name
-    - flow name
-    - dependency
-    - connector
-    - variable
-    - transformation
-    - port
-    - listener
-    - listener configuration
-    - source file
-
-    IMPORTANT:
-
-    Sequence documentation may contain participants such as Database, Kafka,
-    MQ, or External HTTP Service.
-
-    Do NOT create an integration merely because such a participant appears
-    in the sequence documentation.
-
-    An integration requires explicit scanner evidence as defined above.
+    If an accurate example cannot be derived, use an empty string.
 
     ====================
     DATA TRANSFORMATIONS
     ====================
-    For every actual transformation, explain the input-to-output change in
-    business language.
+
+    Create entries only for actual transformations supported by evidence.
 
     Structure:
 
@@ -328,48 +220,85 @@ public static String getFunctionalDocPrompt(String extractedJson) {
       "rules": []
     }
 
-    Example:
+    Translate implementation logic into business language.
 
-      message = "Hello world this is " + name
-
-    becomes:
-
-      "The supplied name is appended to the predefined greeting text."
-
-    Never expose implementation syntax.
+    Do not expose implementation expressions.
 
     ====================
-    BUSINESS RULES
+    INTEGRATIONS
     ====================
-    Include ONLY rules supported by actual logic, such as:
-    - field mapping
-    - field selection
-    - concatenation
-    - conditions
-    - default values
-    - calculations
-    - filtering
-    - routing
-    - formatting
 
-    Do not invent business rules.
+    Create an integration ONLY when explicit valid scanner evidence exists.
 
-    Business rules may be included inside the relevant interface or
-    dataTransformation object.
+    Valid evidence may include:
+
+    - kafkaTopics
+    - mqEndpoints
+    - dbOperations
+    - fileOperations
+    - integrations.database
+    - integrations.kafka
+    - integrations.mq
+    - integrations.file
+    - integrations.externalHttp
+
+    Technical participants in sequence documentation are NOT sufficient.
+
+    Do not infer integrations from:
+
+    - dependencies
+    - connector names
+    - flow names
+    - listener configuration
+    - API paths
+    - application names
+
+    Ignore malformed, empty, ambiguous, or obviously noisy integration values.
+
+    Integration structure:
+
+    {
+      "type": "",
+      "name": "",
+      "direction": "",
+      "description": "",
+      "source": "",
+      "destination": "",
+      "businessPurpose": ""
+    }
+
+   STRICT INTEGRATION RULE:
+
+    Create an integration ONLY if the actual source value is non-empty,
+    meaningful, and clearly proves an integration.
+
+    Empty, missing, malformed, ambiguous, or noisy values MUST NOT create
+    an integration.
+
+    Never invent placeholder values such as:
+    "kafka-topic", "mq-queue", "db-operation",
+    "file-operation", or "external-http".
+
+    If no valid integration evidence exists, return:
+    "integrations": []
+
+    Field names alone are NOT evidence.
 
     ====================
     ERROR SCENARIOS
     ====================
-    Document error scenarios ONLY when explicit evidence exists.
 
-    An error scenario may be derived from:
+    Create an error scenario ONLY when explicit error evidence exists.
+
+    Valid evidence includes:
+
     - explicit error handling
     - exception handling
-    - error responses
-    - status codes
-    - documented failure paths
-    - explicit error sequence steps
-    - scanner error metadata
+    - error response
+    - status code
+    - documented failure path
+
+    Do NOT treat a normal interface as an error scenario.
 
     Structure:
 
@@ -380,206 +309,80 @@ public static String getFunctionalDocPrompt(String extractedJson) {
       "response": ""
     }
 
-    Each field must contain only evidence-supported information.
+    If no explicit error evidence exists:
 
-    Do not invent:
-    - HTTP status codes
-    - exception types
-    - error messages
-    - retry behavior
-    - fallback behavior
-    - validation failures
-    - timeout behavior
-
-    If no explicit error behavior exists, return an empty array.
-
-    ====================
-    SEQUENCE DOCUMENTATION
-    ====================
-    If the "documentation" field contains sequence information, parse and use
-    its participants, steps, actions, and notes as evidence of actual behavior.
-
-    The documentation may itself be a JSON string.
-
-    Use sequence information to improve:
-    - businessFlow
-    - interface descriptions
-    - processing descriptions
-    - transformation descriptions
-    - outputs
-    - error scenarios, when explicitly documented
-
-    DO NOT copy the sequence documentation into the output.
-
-    DO NOT create a "sequence" root section.
-
-    Translate technical participants into business behavior.
-
-    Example:
-
-      HTTP Client -> Customer API
-      "Submit GET request to retrieve customer information."
-
-    becomes:
-
-      "The customer submits a request to retrieve customer information."
-
-    Do not expose participant names when they are purely technical.
-
-    ====================
-    DESCRIPTION QUALITY
-    ====================
-    Descriptions must be concise, specific, grammatical, and business-friendly.
-
-    Explain, when supported:
-    - what is received
-    - relevant data
-    - how it is processed
-    - what changes
-    - what is returned
-
-    Avoid vague descriptions such as:
-
-      "Processes request."
-      "Creates message."
-      "Returns response."
-
-    Prefer:
-
-      "The application uses the name supplied by the caller to construct a
-       greeting message and returns the resulting message in the response."
-
-    Do not add detail that is not supported by evidence.
+    "errorScenarios": []
 
     ====================
     LIMITATIONS
     ====================
-    Add a known limitation only when the available evidence is incomplete
-    and the missing information is meaningful.
 
-    Examples:
+    Add knownLimitations only when missing information materially limits
+    functional understanding.
 
-    "The available data does not establish whether the name parameter is mandatory."
-
-    "No input validation rules are evident from the available data."
-
-    "The error response behavior is not defined in the available data."
-
-    "The available evidence does not establish the business purpose of the
-     downstream customer processing."
-
-    Do not create limitations for information that is irrelevant.
+    Do not invent limitations.
 
     ====================
     OPEN QUESTIONS
     ====================
-    Add open questions only when important behavior cannot be determined from
-    the supplied evidence.
 
-    Examples:
+    Add openQuestions only for important behavior that cannot be determined
+    from the supplied evidence.
 
-    "Is the name input mandatory for the customer information request?"
-
-    "What response should be returned when customer processing fails?"
-
-    "What business data is returned by the customer processing operation?"
-
-    Do not create questions about integrations when no integration evidence
-    exists.
-
-    Do not create questions merely because a technical field is absent.
+    Do not create questions merely because technical information is absent.
 
     ====================
-    FORBIDDEN OUTPUT
+    FLOW ISOLATION
     ====================
-    Do not reproduce scanner metadata fields such as:
 
-    eventType,
-    eventVersion,
-    documentId,
-    documentName,
-    tenant,
-    objectName,
-    status,
-    apis,
-    application,
-    connectors,
-    flows,
-    flowReferences,
-    variables,
-    transformations,
-    dependencies,
-    sourceFiles,
-    runtimeInfo,
-    typeMetadata,
-    kafkaTopics,
-    mqEndpoints,
-    dbOperations,
-    fileOperations,
-    scannedAt,
-    documentation,
-    generatedAt.
+    Each interface must use ONLY evidence belonging to that interface/flow.
 
-    These fields may be used as evidence but must not appear in the output.
-
-    ====================
-    IMPORTANT EVIDENCE RULE
-    ====================
-    Technical participants in sequence documentation are NOT automatically
-    integrations.
-
-    For example, if sequence documentation contains:
-
-      Database
-      Kafka
-      MQ
-      External HTTP Service
-
-    but the scanner metadata does not contain explicit integration evidence,
-    then:
-
-      integrations = []
-
-    Do not infer integrations from sequence participants alone.
+    Never:
+    - copy inputs between APIs
+    - copy outputs between APIs
+    - copy transformations between APIs
+    - copy processing between APIs
+    - copy business rules between APIs
 
     ====================
     FINAL VALIDATION
     ====================
-    Before returning the result verify:
 
-    1. Output is valid parseable JSON.
-    2. JSON only; no surrounding text.
-    3. Exactly eleven root fields exist.
-    4. No scanner metadata is copied.
-    5. No sequence documentation is copied.
-    6. Empty arrays are ignored.
-    7. No integration is inferred.
-    8. Inbound APIs are interfaces.
-    9. Outbound HTTP requires explicit evidence.
-    10. Required flags are evidence-based.
-    11. Output fields are evidence-based.
-    12. Transformations are converted into business language.
-    13. Processing follows the actual sequence.
-    14. businessFlow follows the actual execution order.
-    15. businessCapability is evidence-based.
-    16. errorScenarios contain only explicitly supported error behavior.
-    17. Technical implementation syntax is not exposed.
-    18. Unsupported assumptions are removed.
-    19. Descriptions are complete grammatical sentences.
-    20. No custom root fields are created.
-    21. Technical sequence participants are not treated as integrations
-        without explicit integration evidence.
+    Before responding verify:
+
+    1. Response is valid JSON.
+    2. Response contains ONLY JSON.
+    3. Exactly TEN root fields exist.
+    4. Root field names exactly match the required structure.
+    5. No prompt instructions are returned.
+    6. No scanner metadata fields are returned.
+    7. Previous documentation is not copied.
+    8. No unsupported assumptions are made.
+    9. Inbound HTTP APIs are interfaces.
+    10. Integrations require explicit valid evidence.
+    11. Error scenarios require explicit error evidence.
+    12. Each API uses flow-specific processing.
+    13. Each API uses flow-specific outputs.
+    14. Transformations are evidence-based.
+    15. outputExample contains valid JSON when populated.
+    16. No technical implementation syntax is exposed.
 
     ====================
-    APPLICATION SCANNER JSON
+    SCANNER METADATA
     ====================
+
     %s
 
-    Return ONLY the functional documentation JSON.
+    ====================
+    FINAL RESPONSE
+    ====================
+
+    Return ONLY the FUNCTIONAL_DOC JSON object.
+    Do not return these instructions.
+    Do not summarize these instructions.
+    Do not describe the scanner.
     """.formatted(extractedJson);
 }
-
-
 
 
 
