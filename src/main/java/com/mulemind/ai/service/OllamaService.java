@@ -50,24 +50,22 @@ public class OllamaService {
 
             if (docType == DocumentationType.FUNCTIONAL_DOC) {
                 prompt = PromptHelper.getFunctionalDocPrompt(metadataJson);
-            } 
-            /* 
-            else if (docType == DocumentationType.FLOW_DOC) {
+            } else if (docType == DocumentationType.FLOW_DOC) {
                 prompt = PromptHelper.getFlowDocPrompt(metadataJson);
             } else if (docType == DocumentationType.SEQUENCE_DOC) {
                 prompt = PromptHelper.getSequenceDocPrompt(metadataJson);
             }else if(docType == DocumentationType.TECHNICAL_DOC){
                  prompt = PromptHelper.getTechnicalDocPrompt(metadataJson);
             }
-             */
-            System.out.println("=============== Generated Prompt for Ollama: " + prompt);
+             
+           // System.out.println("=============== Generated Prompt for Ollama: " + prompt);
             
             if (prompt == null) {
                 throw new IllegalArgumentException("Unsupported documentation type: " + docType);
             }
             
             String result= executeOllamaCall(prompt);
-            System.out.println("=============== Generated Documentation from Ollama: " + result);
+            System.out.println("=============== Generated Documentation from Ollama for docType: " + docType.name() + " is: " + result);    
             return result;
         } catch (Exception exception) {
             throw new RuntimeException("Failed to generate application documentation", exception);

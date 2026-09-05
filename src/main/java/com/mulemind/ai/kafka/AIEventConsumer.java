@@ -45,25 +45,38 @@ public class AIEventConsumer {
    
          updateJobStatus(scanEvent, TransformationStatus.AI_ANALYZING);    
         try {
-            for (DocumentationType documentationType : DocumentationType.values()) {
-                String documentation = ollamaService.generateApplicationDocumentation(scanEvent, documentationType);
-                MetadataGeneratedEvent generatedEvent = MetadataGeneratedEvent.builder()
-                        .eventVersion(scanEvent.getEventVersion())
-                        .documentId(scanEvent.getDocumentId())
-                        .documentName(scanEvent.getDocumentName())
-                        .documentationType(documentationType.name())
-                        .tenant(scanEvent.getTenant())
-                        .documentation(documentation)
-                        .build();
-                updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
-                aiKafkaProducer.send(generatedEvent, scanEvent.getDocumentId().toString());
+            for (DocumentationType documentationType : DocumentationType.values()) 
+                {
+                       
+                    System.out.println("******************************* Processing documentation type: " + documentationType.name());   
+                    
+                    String documentation = ollamaService.generateApplicationDocumentation(scanEvent, documentationType);
+                        MetadataGeneratedEvent generatedEvent = MetadataGeneratedEvent.builder()
+                                .eventVersion(scanEvent.getEventVersion())
+                                .documentId(scanEvent.getDocumentId())
+                                .documentName(scanEvent.getDocumentName())
+                                .documentationType(documentationType.name())
+                                .tenant(scanEvent.getTenant())
+                                .documentation(documentation)
+                                .build();
+                    // updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
+                        aiKafkaProducer.send(generatedEvent, scanEvent.getDocumentId().toString());
+                    // updateJobStatus(scanEvent, TransformationStatus.DOCUMENT_GENERATING);
+                        Thread.sleep(3000); // Sleep for 3 seconds between sending events
             }
-
+            updateJobStatus(scanEvent, TransformationStatus.METADATA_PROCESSING);
+            Thread.sleep(1000); // Sleep for 1 seconds between sending events
+            updateJobStatus(scanEvent, TransformationStatus.DOCUMENT_GENERATING);
+            Thread.sleep(1000); // Sleep for 1 seconds between sending events
+            updateJobStatus(scanEvent, TransformationStatus.COMPLETED);
+            Thread.sleep(1000); // Sleep for 1 seconds between sending events
              updateJobStatus(scanEvent, TransformationStatus.DONE);
            
         } catch (RuntimeException exception) {
             log.error("Failed to process scan event for document {}", scanEvent.getDocumentId(), exception);
             updateJobStatus(scanEvent, TransformationStatus.FAILED);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
         log.info("Project scan event received: documentId={}, status={}, eventType={}",

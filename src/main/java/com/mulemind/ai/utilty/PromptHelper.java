@@ -877,142 +877,1192 @@ return """
      * Engineer-facing. Runtime, dependencies, config, deployment constraints.
      */
     public static String getTechnicalDocPrompt(String extractedJson) {
-        return """
-            You are a senior platform engineer documenting the technical footprint of
-            an existing Mule application ahead of a Java re-engineering effort. Return
-            ONLY valid JSON. No markdown, no code fences, no text outside the JSON.
+      return """
+          TASK
 
-            Required JSON shape:
-            {
-              "runtime": {
-                "muleVersion": "...",
-                "javaVersion": "...",
-                "buildTool": "..."
-              },
-              "dependencies": [ { "name": "...", "version": "...", "usedBy": [] } ],
-              "connectors": [ { "type": "...", "version": "...", "referencedInFlows": [] } ],
-              "configProperties": [],
-              "deploymentConstraints": [],
-              "unusedDependencies": [],
-              "openQuestions": []
-            }
+          You are a Senior Platform Architect.
 
-            GROUNDING RULES:
-            - Populate every field only from values literally present in the input
-              JSON (muleRuntime, javaSpecificationVersions, dependencies, connectors
-              arrays). Do not assume a build tool, port, or deployment target that
-              isn't stated -- use openQuestions instead.
-            - "usedBy" / "referencedInFlows": cross-reference the dependency/connector
-              against the flows/processors list. If a connector (e.g. SOCKETS) appears
-              in dependencies but is never referenced by any flow or processor, put it
-              in "unusedDependencies" instead of "connectors", and do not invent a
-              purpose for it.
-            - "deploymentConstraints" should only list constraints directly implied by
-              runtime fields (e.g. minimum Mule version, required Java version). Do not
-              invent infrastructure requirements (memory, scaling, cloud provider) not
-              present in the input.
-            - "configProperties": only include if explicit config/property references
-              exist in the input. If none exist, return an empty array.
+          Convert the APPLICATION SCANNER JSON provided at the end of this
+          prompt into technical documentation describing the application's
+          runtime footprint, dependencies, connector usage, and deployment
+          considerations.
 
-            Extracted application data:
-            %s
-            """.formatted(extractedJson);
+          The scanner JSON is the ONLY source of truth.
+
+          ============================================================
+          ABSOLUTE OUTPUT RULE
+          ============================================================
+
+          RETURN ONLY ONE VALID JSON OBJECT.
+
+          DO NOT return scanner JSON.
+
+          DO NOT copy scanner JSON.
+
+          DO NOT add explanations.
+
+          DO NOT add comments.
+
+          DO NOT add markdown.
+
+          DO NOT add code fences.
+
+          DO NOT write text before or after the JSON.
+
+          The first character MUST be {
+
+          The last character MUST be }
+
+          The output MUST be directly parseable by a JSON parser.
+
+          ============================================================
+          REQUIRED OUTPUT STRUCTURE
+          ============================================================
+
+          {
+            "runtime": {
+              "muleVersion": "",
+              "javaVersion": "",
+              "buildTool": ""
+            },
+            "dependencies": [
+              {
+                "name": "",
+                "version": "",
+                "usedBy": []
+              }
+            ],
+            "connectors": [
+              {
+                "type": "",
+                "version": "",
+                "referencedInFlows": []
+              }
+            ],
+            "configProperties": [],
+            "deploymentConstraints": [],
+            "unusedDependencies": [],
+            "openQuestions": []
+          }
+
+          NEVER add additional root fields.
+
+          NEVER rename fields.
+
+          NEVER change data types.
+
+          ============================================================
+          SOURCE OF TRUTH
+          ============================================================
+
+          Use ONLY evidence present in the scanner JSON.
+
+          Never invent:
+
+          - build tools
+          - deployment targets
+          - cloud providers
+          - infrastructure
+          - memory requirements
+          - CPU requirements
+          - scaling strategies
+          - networking requirements
+          - connector purposes
+          - dependency purposes
+          - versions
+          - property values
+          - environment names
+          - security requirements
+
+          If a value cannot be established from scanner evidence,
+          leave it empty and raise an open question if appropriate.
+
+          ============================================================
+          RUNTIME RULES
+          ============================================================
+
+          Populate runtime fields only from explicit runtime metadata.
+
+          Valid evidence includes:
+
+          - muleRuntime
+          - muleVersion
+          - javaVersion
+          - javaSpecificationVersions
+          - build configuration
+
+          Do not derive versions from dependency names.
+
+          Do not guess versions.
+
+          If build tool is not explicitly identified:
+
+          "buildTool": ""
+
+          and create an appropriate open question.
+
+          ============================================================
+          DEPENDENCY RULES
+          ============================================================
+
+          Add entries only for actual dependencies explicitly found
+          in scanner data.
+
+          Structure:
+
+          {
+            "name": "",
+            "version": "",
+            "usedBy": []
+          }
+
+          Use exact names where available.
+
+          Use exact versions where available.
+
+          Do not invent versions.
+
+          ============================================================
+          DEPENDENCY USAGE RULES
+          ============================================================
+
+          Determine usedBy only from actual scanner evidence.
+
+          Valid evidence:
+
+          - flow processors
+          - connector references
+          - component references
+          - explicit usage mappings
+
+          If usage cannot be proven:
+
+          "usedBy": []
+
+          Never guess usage based on dependency names.
+
+          Example:
+
+          Dependency present:
+
+          mule-sockets-connector
+
+          does NOT prove usage.
+
+          Usage must be evidenced by scanner data.
+
+          ============================================================
+          UNUSED DEPENDENCY RULES
+          ============================================================
+
+          Add a dependency to unusedDependencies only when:
+
+          1. The dependency exists.
+          2. No flow or processor references it.
+          3. No scanner evidence proves usage.
+
+          Do not classify a dependency as unused if evidence is unclear.
+
+          Unclear evidence must result in an open question.
+
+          ============================================================
+          CONNECTOR RULES
+          ============================================================
+
+          Add a connector only when scanner data identifies
+          an actual connector.
+
+          Structure:
+
+          {
+            "type": "",
+            "version": "",
+            "referencedInFlows": []
+          }
+
+          Connector types may include:
+
+          - HTTP
+          - FILE
+          - MQ
+          - JMS
+          - DATABASE
+          - SOCKETS
+          - KAFKA
+
+          Only include connectors actually present
+          in scanner data.
+
+          ============================================================
+          CONNECTOR FLOW REFERENCE RULES
+          ============================================================
+
+          referencedInFlows must contain only flows
+          where scanner evidence proves connector usage.
+
+          Never infer usage.
+
+          Example:
+
+          Connector installed:
+
+          HTTP
+
+          does NOT prove every flow uses HTTP.
+
+          Only actual references may appear.
+
+          ============================================================
+          CONFIGURATION PROPERTY RULES
+          ============================================================
+
+          Include config properties ONLY when explicit
+          property references exist.
+
+          Examples:
+
+          ${host}
+          ${port}
+          ${database.url}
+
+          Do not invent:
+
+          - database.url
+          - kafka.topic
+          - mq.queue
+          - client.id
+
+          If no property references exist:
+
+          "configProperties": []
+
+          ============================================================
+          DEPLOYMENT CONSTRAINT RULES
+          ============================================================
+
+          deploymentConstraints must be derived ONLY
+          from available runtime evidence.
+
+          Valid examples:
+
+          - "Requires Mule runtime version 4.4."
+          - "Requires Java 17."
+
+          Invalid examples:
+
+          - "Requires Kubernetes."
+          - "Requires CloudHub."
+          - "Requires 4 GB RAM."
+          - "Requires autoscaling."
+
+          unless explicitly stated by the scanner.
+
+          ============================================================
+          NO INFERENCE RULE
+          ============================================================
+
+          NEVER infer technical facts from:
+
+          - application names
+          - dependency names
+          - file names
+          - flow names
+          - source folders
+          - connector availability
+          - version patterns
+
+          Presence does not prove usage.
+
+          Reference does not prove deployment.
+
+          Dependency does not prove runtime behavior.
+
+          ============================================================
+          OPEN QUESTION RULES
+          ============================================================
+
+          Add questions only when important technical
+          information cannot be determined.
+
+          Valid examples:
+
+          - "What build tool is used by the application?"
+          - "Can usage of the sockets dependency be confirmed?"
+          - "Which deployment platform hosts the application?"
+
+          Do not create questions for fields
+          where scanner evidence already exists.
+
+          ============================================================
+          EMPTY ARRAY RULE
+          ============================================================
+
+          Empty array means no evidence.
+
+          Ignore empty arrays.
+
+          Do not create placeholder entries.
+
+          Example:
+
+          "connectors": []
+
+          means:
+
+          "connectors": []
+
+          not:
+
+          {
+            "type": "UNKNOWN"
+          }
+
+          ============================================================
+          SENTENCE QUALITY RULES
+          ============================================================
+
+          Every deployment constraint and open question
+          must be a complete grammatical sentence.
+
+          BAD:
+
+          "Java 17"
+
+          GOOD:
+
+          "The application requires Java 17."
+
+          ============================================================
+          FINAL VALIDATION
+          ============================================================
+
+          Before returning verify:
+
+          1. Output is valid JSON.
+          2. Output starts with {.
+          3. Output ends with }.
+          4. Only required root fields exist.
+          5. No scanner JSON is copied.
+          6. No field is invented.
+          7. No version is invented.
+          8. No build tool is invented.
+          9. No deployment target is invented.
+          10. No connector usage is invented.
+          11. No dependency usage is invented.
+          12. Empty arrays remain empty.
+          13. Configuration properties are evidence-based.
+          14. Deployment constraints come only from runtime data.
+          15. Open questions address only unresolved facts.
+          16. No text exists outside JSON.
+
+          If any statement is not directly supported by
+          scanner evidence, REMOVE IT.
+
+          ============================================================
+          APPLICATION SCANNER JSON
+          ============================================================
+
+          %s
+
+          ============================================================
+          END APPLICATION SCANNER JSON
+          ============================================================
+
+          Return ONLY the technical documentation JSON.
+          """.formatted(extractedJson);
     }
-
 
        /**
      * FLOW DOC
      * Structural diagram of flow -> sub-flow -> processor relationships,
      * rendered as Mermaid flowchart syntax.
      */
-    public static String getFlowDocPrompt(String extractedJson) {
-        return """
-            You are a software architect producing a flow diagram of an existing Mule
-            application for a re-engineering effort. Return ONLY valid JSON. No
-            markdown, no code fences, no text outside the JSON.
+       public static String getFlowDocPrompt(String extractedJson) {
+         return """
+             TASK
 
-            Required JSON shape:
-            {
-              "flowSummary": [
-                { "flowName": "...", "trigger": "...", "processorSequence": [], "calls": [] }
-              ],
-              "mermaidFlowchart": "flowchart TD\\n..."
-            }
+             You are a Senior Solution Architect.
 
-            GROUNDING RULES:
-            - "processorSequence" must exactly match the order of the "processors"
-              array for that flow in the input. Do not reorder, merge, or omit steps.
-            - "calls" must exactly match entries in "flowReferences" / "references" for
-              that flow. Do not invent calls to flows that aren't listed.
-            - "mermaidFlowchart" must be valid Mermaid flowchart syntax (flowchart TD),
-              with one node per processor step and one node per flow. Use flow names
-              and processor names as node labels -- do not use generic labels like
-              "Step 1" / "Process Data".
-            - Represent an HTTP trigger as a distinct starting node labeled with its
-              method and path (e.g. "GET /test").
-            - Represent a flow-ref / flow call as an edge from the calling processor
-              node to the target flow's first node.
-            - Do not add error-handling branches, retries, or decision diamonds unless
-              the input data shows an actual choice/error-handler processor. A straight
-              line flow stays a straight line flow.
+             Convert the APPLICATION SCANNER JSON provided at the end of this
+             prompt into an accurate application flow representation.
 
-            Extracted application data:
-            %s
-            """.formatted(extractedJson);
-    }
+             The scanner JSON is the ONLY source of truth.
 
-     /**
+             ============================================================
+             ABSOLUTE OUTPUT RULE
+             ============================================================
+
+             RETURN ONLY ONE VALID JSON OBJECT.
+
+             DO NOT return scanner JSON.
+
+             DO NOT copy scanner JSON.
+
+             DO NOT add explanations.
+
+             DO NOT add comments.
+
+             DO NOT add markdown.
+
+             DO NOT add ```json.
+
+             DO NOT add ```.
+
+             DO NOT write any text before or after JSON.
+
+             The first character MUST be {
+
+             The last character MUST be }
+
+             The output MUST be directly parseable JSON.
+
+             ============================================================
+             REQUIRED OUTPUT STRUCTURE
+             ============================================================
+
+             {
+               "flowSummary": [
+                 {
+                   "flowName": "",
+                   "trigger": "",
+                   "processorSequence": [],
+                   "calls": []
+                 }
+               ],
+               "mermaidFlowchart": ""
+             }
+
+             NEVER add additional root fields.
+
+             NEVER rename root fields.
+
+             ============================================================
+             FLOW SUMMARY RULES
+             ============================================================
+
+             Create one flowSummary object for every actual flow found
+             in the scanner data.
+
+             Flow name must come directly from scanner evidence.
+
+             Do not invent flow names.
+
+             Do not merge multiple flows.
+
+             Do not split a flow into multiple entries.
+
+             ============================================================
+             TRIGGER RULES
+             ============================================================
+
+             Identify trigger only from actual flow metadata.
+
+             Valid examples:
+
+             HTTP GET /customers
+
+             HTTP POST /orders
+
+             Kafka Topic Consumer
+
+             MQ Queue Consumer
+
+             Scheduled Job
+
+             File Listener
+
+             Subflow
+
+             If no trigger is evident and flow is called only by other
+             flows, use:
+
+             "Subflow"
+
+             Do not invent endpoints, schedules, queues or topics.
+
+             ============================================================
+             PROCESSOR SEQUENCE RULES
+             ============================================================
+
+             processorSequence must preserve EXACT execution order.
+
+             The order must match scanner data.
+
+             Do NOT:
+
+             - reorder processors
+             - merge processors
+             - remove processors
+             - summarize processors
+             - invent processors
+
+             Every processor must appear once and only once.
+
+             Example:
+
+             Scanner processors:
+
+             [
+               "Set Variable",
+               "Transform Message",
+               "Flow Reference",
+               "Logger"
+             ]
+
+             Output:
+
+             [
+               "Set Variable",
+               "Transform Message",
+               "Flow Reference",
+               "Logger"
+             ]
+
+             ============================================================
+             FLOW CALL RULES
+             ============================================================
+
+             calls must contain ONLY actual flow references
+             discovered in scanner data.
+
+             Use flowReferences or references only.
+
+             Never infer calls.
+
+             Never guess calls from naming conventions.
+
+             If no flow references exist:
+
+             "calls": []
+
+             ============================================================
+             NO INFERENCE RULE
+             ============================================================
+
+             NEVER infer relationships from:
+
+             - file names
+             - application name
+             - dependencies
+             - connector usage
+             - processor names
+             - variables
+             - transformations
+
+             Every flow connection must be explicitly supported by
+             scanner evidence.
+
+             ============================================================
+             MERMAID FLOWCHART RULES
+             ============================================================
+
+             Generate ONLY valid Mermaid flowchart syntax.
+
+             Mermaid must begin with:
+
+             flowchart TD
+
+             Create:
+
+             - one node per flow
+             - one node per processor
+
+             Use meaningful labels from scanner evidence.
+
+             Do not use generic labels:
+
+             BAD:
+
+             Step 1
+             Step 2
+             Process Data
+
+             GOOD:
+
+             Set Variable
+             Transform Message
+             Publish Customer Event
+
+             ============================================================
+             FLOW CONSTRUCTION RULES
+             ============================================================
+
+             Connect processors sequentially exactly as execution occurs.
+
+             Example:
+
+             A --> B
+             B --> C
+             C --> D
+
+             Do not skip steps.
+
+             Do not add shortcuts.
+
+             ============================================================
+             HTTP TRIGGER RULES
+             ============================================================
+
+             If a flow exposes an HTTP endpoint:
+
+             Create starting node with:
+
+             GET /path
+
+             POST /path
+
+             PUT /path
+
+             DELETE /path
+
+             Example:
+
+             GET_/customer --> setVariable
+
+             HTTP listener must appear as the starting entry node.
+
+             ============================================================
+             FLOW REFERENCE RULES
+             ============================================================
+
+             When a processor invokes another flow:
+
+             Create edge from calling processor node
+             to target flow.
+
+             Example:
+
+             TransformCustomer --> ProcessCustomerFlow
+
+             Only create such edges when an actual
+             flow reference exists.
+
+             ============================================================
+             DECISION RULES
+             ============================================================
+
+             Create branching only when scanner data
+             explicitly contains:
+
+             - Choice
+             - Router
+             - When
+             - Otherwise
+             - Switch
+
+             If no branching component exists:
+
+             Use straight-line flow.
+
+             Do not invent decisions.
+
+             ============================================================
+             ERROR HANDLING RULES
+             ============================================================
+
+             Do not generate:
+
+             - error handlers
+             - retries
+             - exception paths
+             - recovery paths
+
+             unless explicitly present in scanner data.
+
+             ============================================================
+             EMPTY ARRAY RULE
+             ============================================================
+
+             Empty array means no evidence.
+
+             Ignore empty arrays.
+
+             Do not create:
+
+             - fake flow calls
+             - fake processors
+             - fake triggers
+
+             ============================================================
+             VALIDATION RULES
+             ============================================================
+
+             Before returning:
+
+             1. Output is valid JSON.
+             2. Starts with {.
+             3. Ends with }.
+             4. Contains only flowSummary and mermaidFlowchart.
+             5. Every flow exists in scanner data.
+             6. Every processor exists in scanner data.
+             7. Processor order is preserved.
+             8. Every flow call is supported by scanner evidence.
+             9. Mermaid syntax begins with "flowchart TD".
+             10. No invented flows.
+             11. No invented processors.
+             12. No invented integrations.
+             13. No invented decision branches.
+             14. No invented error handling.
+             15. No text outside JSON.
+
+             If anything is not supported by scanner evidence,
+             REMOVE IT.
+
+             ============================================================
+             APPLICATION SCANNER JSON
+             ============================================================
+
+             %s
+
+             ============================================================
+             END APPLICATION SCANNER JSON
+             ============================================================
+
+             Return ONLY the JSON object.
+             """.formatted(extractedJson);
+       }
+
+
+       /**
      * SEQUENCE DOC
      * Caller -> Listener -> Flow -> Sub-flow -> Transform -> Response,
      * rendered as Mermaid sequenceDiagram syntax.
      */
-    public static String getSequenceDocPrompt(String extractedJson) {
-        return """
-            You are a software architect producing a sequence diagram of a single
-            request/response cycle through an existing Mule application. Return ONLY
-            valid JSON. No markdown, no code fences, no text outside the JSON.
+       public static String getSequenceDocPrompt(String extractedJson) {
+         return """
+             TASK
 
-            Required JSON shape:
-            {
-              "participants": [],
-              "steps": [
-                { "from": "...", "to": "...", "action": "...", "note": "..." }
-              ],
-              "mermaidSequenceDiagram": "sequenceDiagram\\n..."
-            }
+             You are a Senior Solution Architect.
 
-            GROUNDING RULES:
-            - "participants" must be derived only from actual actors in the input:
-              the HTTP caller, the listener/flow, any referenced sub-flow, and the
-              transformation step. Do not add participants like "Database" or
-              "External API" unless the input's integrations arrays are non-empty.
-            - Each entry in "steps" must correspond to a real processor or flow-ref in
-              the input, in the order given by the "processors" array. Do not add
-              synthetic steps (e.g. "Validate Input", "Log Error") that aren't backed
-              by an actual processor of that kind in the data.
-            - If the input shows a "transform" processor with DataWeave logic, include
-              one step for it and put the actual (paraphrased, not verbatim) effect of
-              the expression in "note" -- e.g. note that it builds a JSON message
-              incorporating a query parameter, referencing the real variable name.
-            - "mermaidSequenceDiagram" must be valid Mermaid sequenceDiagram syntax,
-              matching the same actors and steps as above one-to-one. End the diagram
-              with the response returned to the caller, using the actual output
-              mimeType/schema from typeMetadata if present.
-            - If there is only one flow and one sub-flow with no branching, the diagram
-              must be a single linear path -- do not add alt/opt blocks that aren't
-              justified by real conditional processors in the input.
+             Convert the APPLICATION SCANNER JSON provided at the end of this
+             prompt into an accurate request/response sequence representation.
 
-            Extracted application data:
-            %s
-            """.formatted(extractedJson);
-    }
+             The scanner JSON is the ONLY source of truth.
 
- 
+             ============================================================
+             ABSOLUTE OUTPUT RULE
+             ============================================================
 
+             RETURN ONLY ONE VALID JSON OBJECT.
 
+             DO NOT return scanner JSON.
 
+             DO NOT copy scanner JSON.
 
+             DO NOT add explanations.
 
-   
-}
+             DO NOT add comments.
 
+             DO NOT add markdown.
+
+             DO NOT add code fences.
+
+             DO NOT write any text before or after the JSON.
+
+             The first character MUST be {
+
+             The last character MUST be }
+
+             The output MUST be directly parseable JSON.
+
+             ============================================================
+             REQUIRED OUTPUT STRUCTURE
+             ============================================================
+
+             {
+               "participants": [],
+               "steps": [
+                 {
+                   "from": "",
+                   "to": "",
+                   "action": "",
+                   "note": ""
+                 }
+               ],
+               "mermaidSequenceDiagram": ""
+             }
+
+             NEVER add additional root fields.
+
+             NEVER rename fields.
+
+             ============================================================
+             SOURCE OF TRUTH
+             ============================================================
+
+             Use ONLY evidence found in the scanner JSON.
+
+             Never invent:
+
+             - participants
+             - integrations
+             - validation logic
+             - authentication logic
+             - authorization logic
+             - retries
+             - exception handling
+             - business rules
+             - request parameters
+             - response fields
+             - database calls
+             - external API calls
+             - Kafka interactions
+             - MQ interactions
+             - file processing
+
+             unless directly supported by scanner evidence.
+
+             ============================================================
+             PARTICIPANT RULES
+             ============================================================
+
+             Participants must be derived only from actual actors
+             identified in scanner data.
+
+             Allowed examples:
+
+             - HTTP Client
+             - API Consumer
+             - Main Flow
+             - Subflow
+             - Referenced Flow
+             - Transformation Step
+             - Database
+             - Kafka
+             - MQ
+             - External HTTP Service
+
+             IMPORTANT:
+
+             Database, Kafka, MQ, File, or External HTTP participants
+             must only be created when actual integration evidence exists.
+
+             Empty integration arrays mean those participants
+             MUST NOT be created.
+
+             Do not invent generic participants such as:
+
+             - Backend
+             - Service Layer
+             - Processor Engine
+             - Business Logic
+             - Middleware
+
+             unless explicitly represented in scanner data.
+
+             ============================================================
+             STEP RULES
+             ============================================================
+
+             Each step must correspond to an actual processor,
+             flow-ref, listener, transformation, or integration action
+             present in scanner data.
+
+             One processor = one sequence step.
+
+             Never merge multiple processors into one step.
+
+             Never skip processors.
+
+             Never reorder processors.
+
+             Execution order must exactly match scanner evidence.
+
+             ============================================================
+             FROM/TO RULES
+             ============================================================
+
+             from and to must identify actual participants.
+
+             Example:
+
+             HTTP Client -> Customer API
+
+             Customer API -> Transformation
+
+             Transformation -> Customer Subflow
+
+             Customer Subflow -> Customer API
+
+             Customer API -> HTTP Client
+
+             Do not create message exchanges that do not exist.
+
+             ============================================================
+             FLOW REFERENCE RULES
+             ============================================================
+
+             If a flow references another flow:
+
+             Create a step representing the invocation.
+
+             Example:
+
+             {
+               "from": "Main Flow",
+               "to": "Customer Subflow",
+               "action": "Invoke customer processing."
+             }
+
+             Create such steps ONLY when flowReferences
+             or references prove the relationship.
+
+             Never infer flow calls from naming conventions.
+
+             ============================================================
+             TRANSFORMATION RULES
+             ============================================================
+
+             When a transformation exists:
+
+             Create a sequence step for the transformation.
+
+             Describe the business effect.
+
+             Do NOT expose:
+
+             - DataWeave syntax
+             - implementation expressions
+             - Mule expressions
+             - Java expressions
+
+             Example:
+
+             BAD:
+
+             payload.message = "Hello " ++ vars.name
+
+             GOOD:
+
+             Creates a message by appending the supplied name
+             to the greeting text.
+
+             ============================================================
+             TRANSFORMATION NOTE RULES
+             ============================================================
+
+             note must explain the actual business impact
+             of the transformation.
+
+             Examples:
+
+             GOOD:
+
+             "The supplied name is combined with a fixed greeting."
+
+             "Customer fields are reformatted into the response structure."
+
+             BAD:
+
+             "Uses DataWeave."
+
+             "Executes transformation."
+
+             "Maps payload."
+
+             ============================================================
+             REQUEST RULES
+             ============================================================
+
+             If scanner evidence shows an inbound HTTP endpoint:
+
+             First step must represent the client request.
+
+             Example:
+
+             HTTP Client -> Customer API
+
+             Action:
+
+             "Submit GET request to retrieve customer information."
+
+             Use actual method and path if available.
+
+             Do not invent parameters.
+
+             ============================================================
+             RESPONSE RULES
+             ============================================================
+
+             Final step must return the response
+             to the original caller.
+
+             Example:
+
+             Customer API -> HTTP Client
+
+             If response schema or mime type is known,
+             describe it.
+
+             If unknown, simply indicate that the response
+             is returned.
+
+             Never invent status codes.
+
+             Never invent response formats.
+
+             ============================================================
+             INTEGRATION RULES
+             ============================================================
+
+             External participants may be created only when
+             integration evidence exists.
+
+             Examples:
+
+             integrations.database populated
+
+             integrations.kafka populated
+
+             integrations.mq populated
+
+             integrations.externalHttp populated
+
+             fileOperations populated
+
+             dbOperations populated
+
+             kafkaTopics populated
+
+             mqEndpoints populated
+
+             If evidence is absent:
+
+             Do not create integration participants
+             or interaction steps.
+
+             ============================================================
+             BRANCHING RULES
+             ============================================================
+
+             Create conditional paths only when
+             scanner data explicitly contains:
+
+             - Choice
+             - Router
+             - Switch
+             - When
+             - Otherwise
+
+             If none exist:
+
+             Use a completely linear sequence.
+
+             ============================================================
+             ERROR HANDLING RULES
+             ============================================================
+
+             Do not create:
+
+             - exception flows
+             - retry flows
+             - fallback flows
+             - validation failures
+             - error responses
+
+             unless explicitly supported by scanner evidence.
+
+             ============================================================
+             MERMAID RULES
+             ============================================================
+
+             Generate valid Mermaid sequence syntax.
+
+             Mermaid must begin with:
+
+             sequenceDiagram
+
+             Every participant in the participants array
+             must appear in Mermaid.
+
+             Every step in steps must appear exactly once
+             in Mermaid.
+
+             Mermaid and JSON must represent the same sequence.
+
+             Do not add extra Mermaid messages.
+
+             Do not omit JSON messages.
+
+             ============================================================
+             PARTICIPANT CONSISTENCY RULES
+             ============================================================
+
+             Every step.from must exist in participants.
+
+             Every step.to must exist in participants.
+
+             No unused participants.
+
+             No missing participants.
+
+             ============================================================
+             EMPTY ARRAY RULE
+             ============================================================
+
+             Empty array means no evidence.
+
+             Ignore empty arrays.
+
+             Do not create placeholder participants.
+
+             Do not create placeholder interactions.
+
+             ============================================================
+             SENTENCE QUALITY RULES
+             ============================================================
+
+             Every action must be a complete sentence.
+
+             Every note must be a complete sentence.
+
+             BAD:
+
+             "Transform payload"
+
+             GOOD:
+
+             "The application reformats the incoming data into the response structure."
+
+             ============================================================
+             FINAL VALIDATION
+             ============================================================
+
+             Before returning verify:
+
+             1. Output is valid JSON.
+             2. Starts with {.
+             3. Ends with }.
+             4. Only required root fields exist.
+             5. No scanner JSON is copied.
+             6. Every participant is supported by evidence.
+             7. Every step maps to a real processor.
+             8. Processor order is preserved.
+             9. No participant is invented.
+             10. No integration is invented.
+             11. No business rule is invented.
+             12. No validation logic is invented.
+             13. No error handling is invented.
+             14. Mermaid starts with "sequenceDiagram".
+             15. Mermaid exactly matches JSON steps.
+             16. Final response returns to original caller.
+             17. No text exists outside JSON.
+
+             If any statement is not directly supported by
+             scanner evidence, REMOVE IT.
+
+             ============================================================
+             APPLICATION SCANNER JSON
+             ============================================================
+
+             %s
+
+             ============================================================
+             END APPLICATION SCANNER JSON
+             ============================================================
+
+             Return ONLY the sequence documentation JSON.
+             """.formatted(extractedJson);
+       }
+
+     }
